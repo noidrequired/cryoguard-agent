@@ -1,0 +1,38 @@
+{
+  "incident_event": {
+    "event_id": "EVT-CRYO-88301",
+    "timestamp": "2026-10-04T02:14:00-05:00",
+    "shipment_id": "SHP-CAR-T-9921",
+    "consignee_id": "HOSP-MAYO-ROCHESTER",
+    "carrier_unit": "Truck Unit #409 (Apex Express)",
+    "driver_name": "Marcus Vance",
+    "cargo_manifest": {
+      "item": "Autologous CAR-T Cell Infusion Lot #BV-2026-90",
+      "patient_id": "PT-883-MAYO",
+      "required_band": "+2.0C to +8.0C",
+      "critical_excursion_ceiling": 8.0,
+      "commercial_value_usd": 420000
+    },
+    "location": {
+      "latitude": 42.9810,
+      "longitude": -89.3021,
+      "highway": "I-90 / I-39 Northbound, Mile Marker 142 (Near Madison, WI)",
+      "distance_to_destination_miles": 168.0
+    },
+    "sensor_readings": {
+      "cargo_temperature_celsius": 6.4,
+      "temp_delta_per_hour": 1.4,
+      "ambient_temperature_celsius": 19.5,
+      "compressor_power_draw_watts": 0.0,
+      "compressor_status": "FAULT_COMPRESSOR_MOTOR_TRIP",
+      "backup_dry_ice_pack_status": "DEPLETED_92_PERCENT"
+    },
+    "transit_schedule": {
+      "original_promised_eta": "2026-10-04T05:30:00-05:00",
+      "sla_deadline": "2026-10-04T06:00:00-05:00",
+      "surgical_hard_stop": "2026-10-04T07:00:00-05:00",
+      "current_traffic_condition": "SEVERE_ACCIDENT_DELAYS_I90_NORTH",
+      "projected_unmitigated_eta": "2026-10-04T06:45:00-05:00"
+    }
+  }
+}

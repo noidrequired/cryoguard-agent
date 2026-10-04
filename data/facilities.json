@@ -1,0 +1,54 @@
+[
+  {
+    "facility_id": "DEPOT-CHI-01",
+    "name": "Midwest BioVault Logistics Hub",
+    "location": "Schaumburg, IL",
+    "lat": 42.0334,
+    "lng": -88.0834,
+    "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)", "Liquid Nitrogen Charging"],
+    "gxp_certified": true,
+    "open_24_7": true,
+    "current_capacity_status": "AVAILABLE",
+    "service_time_minutes": 25,
+    "dispatch_contact": "ops-chicago@biovaultlogistics.com"
+  },
+  {
+    "facility_id": "DEPOT-MSN-02",
+    "name": "Apex Central Cold-Chain Dock",
+    "location": "Madison, WI",
+    "lat": 43.0731,
+    "lng": -89.4012,
+    "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)", "Reefer Compressor Repair"],
+    "gxp_certified": true,
+    "open_24_7": true,
+    "current_capacity_status": "AVAILABLE",
+    "service_time_minutes": 20,
+    "dispatch_contact": "madison-dispatch@apexcoldchain.com"
+  },
+  {
+    "facility_id": "DEPOT-LSE-03",
+    "name": "Coulee Region Pharma Storage",
+    "location": "La Crosse, WI",
+    "lat": 43.8014,
+    "lng": -91.2396,
+    "capabilities": ["Refrigerated Cross-Dock (2-8C)"],
+    "gxp_certified": false,
+    "open_24_7": false,
+    "current_capacity_status": "CLOSED_NIGHT",
+    "service_time_minutes": 60,
+    "dispatch_contact": "dock@couleeregion.com"
+  },
+  {
+    "facility_id": "DEPOT-RCH-04",
+    "name": "Rochester MedLogistics Hub",
+    "location": "Rochester, MN",
+    "lat": 44.0121,
+    "lng": -92.4802,
+    "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)", "Final Mile Hospital Courier"],
+    "gxp_certified": true,
+    "open_24_7": true,
+    "current_capacity_status": "AVAILABLE",
+    "service_time_minutes": 15,
+    "dispatch_contact": "reception@rochestermedlog.com"
+  }
+]
