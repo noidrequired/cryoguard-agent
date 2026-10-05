@@ -1,0 +1,178 @@
+[
+  {
+    "id": "ANOM-01",
+    "name": "Compressor Motor Overload Trip",
+    "category": "Active Cooling Failure",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Primary mechanical compressor motor electrical trip on I-90. Power draw dropped to 0W. Cargo temperature rising at +1.4°C/hr.",
+    "fault_code": "ERR-COMP-409-TRIP",
+    "temp_rate": 1.4,
+    "power_w": 0,
+    "risk_exposure": "$470,000 USD (Batch Condemnation + SLA Breach)"
+  },
+  {
+    "id": "ANOM-02",
+    "name": "R-404A Refrigerant High-Pressure Line Leak",
+    "category": "Thermal Fluid Depletion",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Refrigerant line fractured from vibration. System lost cooling charge. Rapid thermal rise at +1.8°C/hr.",
+    "fault_code": "ERR-REF-P-LOW",
+    "temp_rate": 1.8,
+    "power_w": 350,
+    "risk_exposure": "$470,000 USD (Thermal Degradation)"
+  },
+  {
+    "id": "ANOM-03",
+    "name": "Rear Door Gasket Micro-Seal Infiltration",
+    "category": "Insulation Breakdown",
+    "sla_governed": "SLA-CHAIN-CUSTODY",
+    "description": "Door seal gasket torn on rough highway section. Hot ambient air entering cargo chamber at +2.1°C/hr.",
+    "fault_code": "WARN-SEAL-AIRFLOW",
+    "temp_rate": 2.1,
+    "power_w": 2600,
+    "risk_exposure": "$470,000 USD (Excursion Ceiling Breach)"
+  },
+  {
+    "id": "ANOM-04",
+    "name": "Evaporator Fan Ice-Up & Core Choke",
+    "category": "Air Circulation Failure",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Moisture condensation caused ice buildup on evaporator fans. Airflow blocked; hot spots developing at +1.6°C/hr.",
+    "fault_code": "ERR-EVAP-FAN-STALL",
+    "temp_rate": 1.6,
+    "power_w": 800,
+    "risk_exposure": "$470,000 USD (Stratification Shock)"
+  },
+  {
+    "id": "ANOM-05",
+    "name": "Auxiliary Battery Power Unit Cell Dropout",
+    "category": "Electrical Bus Failure",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Secondary lithium battery bank dropped below 11.2V. Reefer operating on reserve power with 18 minutes of runtime remaining.",
+    "fault_code": "CRIT-BAT-UVLO",
+    "temp_rate": 1.3,
+    "power_w": 120,
+    "risk_exposure": "$470,000 USD (Total Shutdown Imminent)"
+  },
+  {
+    "id": "ANOM-06",
+    "name": "Condenser Fan Debris Impact Damage",
+    "category": "Physical Road Damage",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Highway debris shattered external condenser fan blades. Thermal cutoff engaged to prevent motor fire.",
+    "fault_code": "ERR-COND-FAN-SHUTDOWN",
+    "temp_rate": 1.7,
+    "power_w": 0,
+    "risk_exposure": "$470,000 USD (Thermal Runaway)"
+  },
+  {
+    "id": "ANOM-07",
+    "name": "Emergency Dry-Ice Depletion Runaway",
+    "category": "Passive Cooling Exhaustion",
+    "sla_governed": "SLA-FROZEN-MKT",
+    "description": "Backup dry-ice bunker depleted to under 8% remaining mass due to elevated ambient road temperatures.",
+    "fault_code": "WARN-DRYICE-8PCT",
+    "temp_rate": 1.5,
+    "power_w": 1800,
+    "risk_exposure": "$470,000 USD (Excursion Budget Depleted)"
+  },
+  {
+    "id": "ANOM-08",
+    "name": "Reefer Inverter High-Temperature Lockout",
+    "category": "Power Electronics Fault",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Power inverter module reached 88°C internal junction limit, triggering automatic safety thermal protection shutdown.",
+    "fault_code": "ERR-INV-OVERHEAT-88C",
+    "temp_rate": 1.6,
+    "power_w": 0,
+    "risk_exposure": "$470,000 USD (Compressor Power Cut)"
+  },
+  {
+    "id": "ANOM-09",
+    "name": "I-90 Interstate Hazmat Fire Standstill",
+    "category": "Traffic & Logistics Bottleneck",
+    "sla_governed": "SLA-SURGICAL-JIT",
+    "description": "Complete highway standstill 30 miles south of Madison. Delay projected at +150 minutes, jeopardizing the 06:00 AM surgical delivery.",
+    "fault_code": "LOG-GRIDLOCK-SLA-BREACH",
+    "temp_rate": 0.8,
+    "power_w": 2200,
+    "risk_exposure": "$50,000 USD SLA Liquidated Damages"
+  },
+  {
+    "id": "ANOM-10",
+    "name": "Liquid Nitrogen Pressure Relief Valve Lock",
+    "category": "Cryogenic System Failure",
+    "sla_governed": "SLA-CRYO-LN2",
+    "description": "Cryogenic dewar valve stuck open, venting nitrogen reserve. Vaporization rate doubled; secondary barrier active.",
+    "fault_code": "WARN-LN2-VENT-ACTIVE",
+    "temp_rate": 1.9,
+    "power_w": 400,
+    "risk_exposure": "$550,000 USD (Cryo Preservation Breach)"
+  },
+  {
+    "id": "ANOM-11",
+    "name": "Telematics Microcontroller Thermal Brownout",
+    "category": "Sensor & IoT Anomaly",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Primary sensor hub suffered voltage irregularity. Secondary sensor reports rapid thermal climb to 6.5°C.",
+    "fault_code": "ERR-ECU-SENSOR-DESYNC",
+    "temp_rate": 1.4,
+    "power_w": 0,
+    "risk_exposure": "$470,000 USD (Loss of Quality Telemetry)"
+  },
+  {
+    "id": "ANOM-12",
+    "name": "Extreme 41°C Ambient Asphalt Heatwave",
+    "category": "Environmental Extreme",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Asphalt radiation heatwave pushing external wall temp past 48°C. Active refrigeration duty cycle at 100% capacity.",
+    "fault_code": "WARN-AMBIENT-EXTREME",
+    "temp_rate": 1.2,
+    "power_w": 2800,
+    "risk_exposure": "$470,000 USD (Cooling Saturation)"
+  },
+  {
+    "id": "ANOM-13",
+    "name": "Cargo Bay Access Sensor Tamper Trigger",
+    "category": "Security & Quality Breach",
+    "sla_governed": "SLA-CHAIN-CUSTODY",
+    "description": "Electronic tamper latch triggered on highway. Temperature spiked from open airflow, requiring immediate GxP quarantine inspection.",
+    "fault_code": "SEC-BAY-LATCH-OPEN",
+    "temp_rate": 2.3,
+    "power_w": 1800,
+    "risk_exposure": "$470,000 USD (Sterility & Thermal Compromise)"
+  },
+  {
+    "id": "ANOM-14",
+    "name": "Diesel Alternator Drive Belt Slippage",
+    "category": "Mechanical Powertrain Fault",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Alternator belt glazed and slipping under load. Generator output dropped 75%, disabling auxiliary cooling compressor.",
+    "fault_code": "ERR-ALT-BELT-SLIP",
+    "temp_rate": 1.5,
+    "power_w": 300,
+    "risk_exposure": "$470,000 USD (Power Starvation)"
+  },
+  {
+    "id": "ANOM-15",
+    "name": "Microprocessor Defrost Cycle Runaway",
+    "category": "Firmware & Controller Bug",
+    "sla_governed": "SLA-COLD-2TO8",
+    "description": "Reefer defrost heater coil stuck in continuous active heating cycle, actively injecting thermal energy into the cargo hold.",
+    "fault_code": "CRIT-DEFROST-STUCK-HEATING",
+    "temp_rate": 2.8,
+    "power_w": 3200,
+    "risk_exposure": "$470,000 USD (Immediate Excursion Threat)"
+  },
+  {
+    "id": "ANOM-16",
+    "name": "Multi-Axis Severe Pothole G-Shock Excursion",
+    "category": "Transit Physical Shock",
+    "sla_governed": "SLA-MECHANICAL-GFORCE",
+    "description": "Severe 4.2G shock on interstate expansion joint dislodged dry-ice retention bracket, causing rapid thermal venting.",
+    "fault_code": "WARN-GSHOCK-4.2G-BREACH",
+    "temp_rate": 1.6,
+    "power_w": 1400,
+    "risk_exposure": "$320,000 USD (Mechanical Dislocation)"
+  }
+]

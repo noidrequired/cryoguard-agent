@@ -1,0 +1,74 @@
+{
+  "SLA-COLD-2TO8": {
+    "sla_id": "SLA-COLD-2TO8",
+    "name": "Standard Cold-Chain Biologics SLA (+2°C to +8°C)",
+    "applies_to": ["Cell Therapies", "Monoclonal Antibodies", "Insulin"],
+    "thermal_band": "+2.0°C to +8.0°C",
+    "excursion_ceiling": 8.0,
+    "max_cumulative_excursion_mins": 120,
+    "immediate_condemn_temp": 12.0,
+    "financial_liability": "$420,000 asset replacement + $50,000 late surgery liquidated damages",
+    "notification_window_mins": 60,
+    "governing_standard": "FDA 21 CFR Part 211 / cGMP Annex 15"
+  },
+  "SLA-CRYO-LN2": {
+    "sla_id": "SLA-CRYO-LN2",
+    "name": "Ultra-Low Cryogenic Liquid Nitrogen SLA (<-150°C)",
+    "applies_to": ["Autologous CAR-T", "Stem Cells", "Cryopreserved Tissue"],
+    "thermal_band": "-196.0°C to -150.0°C",
+    "excursion_ceiling": -150.0,
+    "max_cumulative_excursion_mins": 30,
+    "immediate_condemn_temp": -120.0,
+    "financial_liability": "$550,000 commercial batch loss + 100% freight forfeiture",
+    "notification_window_mins": 15,
+    "governing_standard": "cGMP Liquid Nitrogen Vapor Phase Protocol"
+  },
+  "SLA-FROZEN-MKT": {
+    "sla_id": "SLA-FROZEN-MKT",
+    "name": "Deep-Frozen mRNA Stability SLA (-20°C ± 5°C)",
+    "applies_to": ["mRNA Vaccines", "Lipid Nanoparticles"],
+    "thermal_band": "-25.0°C to -15.0°C",
+    "excursion_ceiling": -15.0,
+    "max_cumulative_excursion_mins": 45,
+    "immediate_condemn_temp": -5.0,
+    "financial_liability": "$380,000 batch invalidation + $40,000 regulatory filing charge",
+    "notification_window_mins": 30,
+    "governing_standard": "USP <1079> Good Storage & Shipping Practices"
+  },
+  "SLA-SURGICAL-JIT": {
+    "sla_id": "SLA-SURGICAL-JIT",
+    "name": "Time-Critical Surgical Hard-Stop SLA (OTIF Protocol)",
+    "applies_to": ["Patient-Conditioned Infusions", "Organ Transplants"],
+    "thermal_band": "+2.0°C to +8.0°C",
+    "excursion_ceiling": 8.0,
+    "max_cumulative_excursion_mins": 90,
+    "immediate_condemn_temp": 12.0,
+    "financial_liability": "$2,500 per 15-minute delay past 06:00 AM; $50,000 if surgery postponed",
+    "notification_window_mins": 20,
+    "governing_standard": "Hospital JIT Surgical Infusion Schedule"
+  },
+  "SLA-CHAIN-CUSTODY": {
+    "sla_id": "SLA-CHAIN-CUSTODY",
+    "name": "GxP Anti-Tamper & Security Integrity SLA",
+    "applies_to": ["Controlled Substances", "Patient-Specific Therapeutics"],
+    "thermal_band": "+2.0°C to +8.0°C",
+    "excursion_ceiling": 8.0,
+    "max_cumulative_excursion_mins": 60,
+    "immediate_condemn_temp": 15.0,
+    "financial_liability": "$470,000 batch quarantine + mandatory DEA/FDA chain-of-custody audit",
+    "notification_window_mins": 10,
+    "governing_standard": "FDA 21 CFR Part 11 Electronic Records & Physical Tamper Proof"
+  },
+  "SLA-MECHANICAL-GFORCE": {
+    "sla_id": "SLA-MECHANICAL-GFORCE",
+    "name": "Transit Vibration & Mechanical G-Shock SLA",
+    "applies_to": ["Vialed Infusions", "Prefilled Cryo-Syringes"],
+    "thermal_band": "+2.0°C to +8.0°C",
+    "excursion_ceiling": 8.0,
+    "max_cumulative_excursion_mins": 120,
+    "immediate_condemn_temp": 10.0,
+    "financial_liability": "$320,000 particulate aggregation rejection penalty",
+    "notification_window_mins": 45,
+    "governing_standard": "ASTM D4169 / ISTA 3A Distribution Integrity"
+  }
+}
