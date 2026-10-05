@@ -3,25 +3,13 @@ import math
 import os
 from datetime import datetime
 from typing import Dict, Any, List
+from src.routing import get_driving_route
 
 SLA_DB_PATH = "data/sla_contracts.json"
 CUSTOMERS_DB_PATH = "data/customers.json"
 
-def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    R = 3958.8  # Earth radius in miles
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2) ** 2 +
-         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-         math.sin(dlon / 2) ** 2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return round(R * c, 1)
-
 def get_contract_clauses(customer_id: str = None, sla_id: str = "SLA-COLD-2TO8") -> Dict[str, Any]:
-    """
-    Dynamically retrieves governing Quality Agreement clauses and SLA penalties
-    for the specific customer sponsor and therapy in transit.
-    """
+    """Dynamically retrieves governing Quality Agreement clauses and SLA penalties."""
     sla_data = {}
     if os.path.exists(SLA_DB_PATH):
         with open(SLA_DB_PATH, "r") as f:
@@ -59,44 +47,33 @@ def find_nearby_cold_storage(
     candidate_hubs: List[Dict[str, Any]] = None,
     curveball_condition: str = "NONE"
 ) -> List[Dict[str, Any]]:
-    """Evaluates candidate facilities with live operational availability and outage simulation."""
+    """Evaluates candidate facilities using real OSRM road driving distances and travel times."""
     if not candidate_hubs:
-        candidate_hubs = [
-            {
-                "facility_id": "DEPOT-CORRIDOR-PRIMARY",
-                "name": "Regional GxP Thermal Hub",
-                "lat": current_lat + 0.08,
-                "lon": current_lng - 0.06,
-                "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-                "gxp_certified": True
-            },
-            {
-                "facility_id": "DEPOT-CORRIDOR-BACKUP",
-                "name": "Apex Secondary Storage Dock",
-                "lat": current_lat - 0.05,
-                "lon": current_lng + 0.04,
-                "capabilities": ["Refrigerated Cross-Dock (2-8C)", "Dry Ice Refill"],
-                "gxp_certified": True
-            }
-        ]
+        candidate_hubs = []
     
     results = []
     for idx, hub in enumerate(candidate_hubs):
         h_copy = hub.copy()
-        h_copy["distance_miles"] = _haversine_distance(current_lat, current_lng, hub["lat"], hub["lon"])
         
+        # Use OSRM road driving routing
+        route_meta = get_driving_route(current_lat, current_lng, hub["lat"], hub["lon"])
+        h_copy["road_distance_miles"] = route_meta.get("distance_miles", 10.0)
+        h_copy["road_transit_minutes"] = route_meta.get("duration_minutes", 15.0)
+        h_copy["routing_source"] = route_meta.get("source", "OSRM")
+        
+        # Check for active curveballs
         if "POWER_OUTAGE" in curveball_condition and idx == 0:
             h_copy["status"] = "UNAVAILABLE_SUBSTATION_FIRE"
             h_copy["service_alert"] = "CRITICAL: Electrical substation fire. Facility offline; intake doors closed."
         elif "DETOUR_BLOCKED" in curveball_condition and idx == 0:
             h_copy["status"] = "ACCESS_RAMP_CLOSED"
-            h_copy["service_alert"] = "ROAD CLOSURE: Access ramp blocked by multi-vehicle tanker jackknife."
+            h_copy["service_alert"] = "ROAD CLOSURE: Access ramp blocked by multi-vehicle tanker incident."
         else:
             h_copy["status"] = "AVAILABLE"
             
         results.append(h_copy)
         
-    results.sort(key=lambda x: x["distance_miles"])
+    results.sort(key=lambda x: x["road_distance_miles"])
     return results
 
 def reserve_dock_replenishment(facility_id: str, shipment_id: str, required_service: str = "Dry Ice Refill") -> Dict[str, Any]:

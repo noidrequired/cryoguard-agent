@@ -5,6 +5,7 @@ import time
 import streamlit as st
 import plotly.graph_objects as go
 from src.agent import run_cryoguard_mission
+from src.routing import get_driving_route, resample_waypoints
 
 SIM_STEP_DELAY = 0.5
 
@@ -265,7 +266,7 @@ else:
     MapTrace = getattr(go, "Scattermapbox", go.Scatter)
     map_config = dict(mapbox_style="carto-darkmatter")
 
-# Load All Enterprise Databases
+# Load All Databases
 @st.cache_data
 def load_all_databases():
     with open("data/customers.json", "r") as f:
@@ -282,7 +283,7 @@ def load_all_databases():
 
 customers_pool, anomalies_pool, slas_db, routes_pool, base_telemetry = load_all_databases()
 
-# Session State Initialization (Blank Slate by Default)
+# Session State Initialization
 if "has_run_started" not in st.session_state:
     st.session_state["has_run_started"] = False
 if "is_running" not in st.session_state:
@@ -299,10 +300,14 @@ if "cur_temp" not in st.session_state:
     st.session_state["cur_temp"] = 3.5
 if "cur_meter" not in st.session_state:
     st.session_state["cur_meter"] = 0
-if "target_coords" not in st.session_state:
-    st.session_state["target_coords"] = (0.0, 0.0)
 if "service_countdown" not in st.session_state:
     st.session_state["service_countdown"] = 0
+
+# Dynamic OSRM Route Vectors
+if "active_leg_points" not in st.session_state:
+    st.session_state["active_leg_points"] = []
+if "leg_point_idx" not in st.session_state:
+    st.session_state["leg_point_idx"] = 0
 if "passed_points" not in st.session_state:
     st.session_state["passed_points"] = []
 
@@ -340,7 +345,7 @@ st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
             <h2 style="margin: 0; color: #f8fafc; font-weight: 800; font-size: 1.55rem;">🧊 CryoGuard AI™ | Operations Commander</h2>
-            <span style="color: #94a3b8; font-size: 0.86rem; font-weight: 500;">Multi-Customer Autonomous SLA Defense & Regulatory Life Sciences Preservation</span>
+            <span style="color: #94a3b8; font-size: 0.86rem; font-weight: 500;">OSRM Road-Navigated Telematics & Multi-Sponsor Quality Agreement Defense</span>
         </div>
         <div style="text-align: right;">
             <span style="background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 14px; border-radius: 20px; font-size: 0.80rem; font-weight: 700;">
@@ -352,17 +357,16 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================================================================
-# 1. DYNAMIC MISSION CONFIGURATION PANEL
+# 1. DYNAMIC CONFIGURATION PANEL
 # =========================================================================
 with st.container():
     st.markdown('<div class="config-card">', unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns([1.3, 1.3, 1.3, 1.0, 1.0])
 
     with c1:
-        # Customer Selection
         cust_opts = {"AUTO": "🎲 Auto (Random Sponsor)"}
         for c in customers_pool:
-            cust_opts[c["customer_id"]] = f"{c['customer_name']} ({c['drug_product'][:22]}...)"
+            cust_opts[c["customer_id"]] = f"{c['customer_name']} ({c['drug_product'][:20]}...)"
         
         sel_cust = st.selectbox(
             "Customer Sponsor & Cargo:",
@@ -374,7 +378,6 @@ with st.container():
         st.session_state["selected_customer_id"] = sel_cust
 
     with c2:
-        # Anomaly Selection
         anomaly_opts = {"AUTO": "🎲 Auto (Dynamic Runtime Fault)"}
         for a in anomalies_pool:
             anomaly_opts[a["id"]] = f"{a['name']} ({a['category']})"
@@ -389,7 +392,6 @@ with st.container():
         st.session_state["selected_anomaly_id"] = sel_anom
 
     with c3:
-        # Curveball Selection
         curveball_opts = {
             "AUTO": "🎲 Auto (Evaluate during triage)",
             "NONE": "Nominal Protocol (No Curveball)",
@@ -413,38 +415,43 @@ with st.container():
             if st.button("▶️ Launch", type="primary", use_container_width=True):
                 chosen_route = random.choice(routes_pool)
                 
-                # Customer Sponsor Selection
                 if st.session_state["selected_customer_id"] == "AUTO":
                     chosen_cust = random.choice(customers_pool)
                 else:
                     chosen_cust = next(c for c in customers_pool if c["customer_id"] == st.session_state["selected_customer_id"])
 
+                # Fetch real OSRM highway route for this corridor
+                o = chosen_route["origin"]
+                dest = chosen_route["destination"]
+                road_route = get_driving_route(o["lat"], o["lon"], dest["lat"], dest["lon"])
+                
+                # Resample highway line to ~70 animated road waypoints
+                sampled_pts = resample_waypoints(road_route["waypoints"], target_count=70)
+
                 st.session_state["active_customer"] = chosen_cust
                 st.session_state["active_route"] = chosen_route
+                st.session_state["active_leg_points"] = sampled_pts
+                st.session_state["leg_point_idx"] = 0
                 st.session_state["active_anomaly"] = None
                 st.session_state["chosen_hub"] = None
                 st.session_state["active_curveball"] = "NONE"
                 st.session_state["anomaly_trigger_sec"] = random.randint(16, 24)
                 
-                o_lat, o_lon = chosen_route["origin"]["lat"], chosen_route["origin"]["lon"]
-                dest_lat, dest_lon = chosen_route["destination"]["lat"], chosen_route["destination"]["lon"]
-                
-                st.session_state["cur_lat"] = o_lat
-                st.session_state["cur_lon"] = o_lon
+                st.session_state["cur_lat"] = sampled_pts[0]["lat"]
+                st.session_state["cur_lon"] = sampled_pts[0]["lon"]
                 st.session_state["cur_temp"] = 3.5
                 st.session_state["cur_meter"] = 0
-                st.session_state["target_coords"] = (dest_lat, dest_lon)
                 
                 st.session_state["mission_clock"] = 0
                 st.session_state["sim_state"] = "NOMINAL"
                 st.session_state["mission_result"] = None
-                st.session_state["passed_points"] = [{"sec": 0, "temp": 3.5, "lat": o_lat, "lon": o_lon}]
+                st.session_state["passed_points"] = [{"sec": 0, "temp": 3.5, "lat": st.session_state["cur_lat"], "lon": st.session_state["cur_lon"]}]
                 st.session_state["has_run_started"] = True
                 st.session_state["run_logs"] = [
                     f"[T+00s] 🟢 Fleet telematics online. Unit #409 departed {chosen_route['origin']['name']}.",
+                    f"[T+00s] 🛣️ OSRM Route: {road_route['distance_miles']} driving miles via interstate network ({road_route['source']}).",
                     f"[T+00s] 🏢 Sponsor: {chosen_cust['customer_name']} | Agreement: {chosen_cust['contract_title']}",
-                    f"[T+00s] 📦 Drug Therapy: {chosen_cust['drug_product']} (Valuation: ${chosen_cust['valuation_usd']:,} USD)",
-                    f"[T+00s] 🏥 Consignee Facility: {chosen_cust['consignee_facility']} | Telemetry: Nominal 3.5°C"
+                    f"[T+00s] 📦 Drug Therapy: {chosen_cust['drug_product']} (Valuation: ${chosen_cust['valuation_usd']:,} USD)"
                 ]
                 st.session_state["is_running"] = True
                 st.rerun()
@@ -467,6 +474,7 @@ with st.container():
             st.session_state["active_anomaly"] = None
             st.session_state["active_curveball"] = "NONE"
             st.session_state["mission_result"] = None
+            st.session_state["active_leg_points"] = []
             st.session_state["passed_points"] = []
             st.session_state["run_logs"] = []
             st.rerun()
@@ -606,7 +614,6 @@ if st.session_state["has_run_started"] and st.session_state["mission_result"]:
         """, unsafe_allow_html=True)
 
         for thought in raw_thoughts:
-            # Format structured reasoning pills
             formatted_thought = thought
             formatted_thought = formatted_thought.replace("[THREAT ANALYSIS]:", '<span class="thought-stage-pill stage-threat">THREAT ANALYSIS</span>')
             formatted_thought = formatted_thought.replace("[CONTRACT AUDIT]:", '<span class="thought-stage-pill stage-contract">CONTRACT AUDIT</span>')
@@ -633,7 +640,7 @@ with tab_unified:
     map_col, log_col = st.columns([1.15, 1])
 
     with map_col:
-        st.markdown("<h5 style='margin-bottom: 6px;'>🗺️ Closed-Loop Telematics Map (AI-Controlled Movement)</h5>", unsafe_allow_html=True)
+        st.markdown("<h5 style='margin-bottom: 6px;'>🗺️ Closed-Loop Telematics Map (OSRM Road Navigation)</h5>", unsafe_allow_html=True)
         fig_map = go.Figure()
 
         if not st.session_state["has_run_started"]:
@@ -646,16 +653,29 @@ with tab_unified:
             route_info = st.session_state["active_route"]
             chosen_hub = st.session_state["chosen_hub"]
             passed_pts = st.session_state["passed_points"]
+            leg_pts = st.session_state["active_leg_points"]
 
+            # Real Highway Network Polyline
+            if leg_pts:
+                fig_map.add_trace(MapTrace(
+                    lat=[p["lat"] for p in leg_pts],
+                    lon=[p["lon"] for p in leg_pts],
+                    mode='lines',
+                    line=dict(width=3, color="#38bdf8"),
+                    name="Highway Network Route"
+                ))
+
+            # Breadcrumb trail of traversed points
             if passed_pts:
                 fig_map.add_trace(MapTrace(
                     lat=[p["lat"] for p in passed_pts],
                     lon=[p["lon"] for p in passed_pts],
                     mode='lines',
-                    line=dict(width=3, color="#ef4444" if cur_temp > 6.0 else "#22c55e"),
-                    name="Breadcrumbs"
+                    line=dict(width=4, color="#ef4444" if cur_temp > 6.0 else "#22c55e"),
+                    name="Traversed Path"
                 ))
 
+            # Vehicle marker
             fig_map.add_trace(MapTrace(
                 lat=[st.session_state["cur_lat"]],
                 lon=[st.session_state["cur_lon"]],
@@ -720,7 +740,7 @@ with tab_agent:
             """, unsafe_allow_html=True)
             st.json(step["result"])
 
-# --- TAB 3: CUSTOMER CONTRACT AUDIT (DYNAMIC AGREEMENT DISPLAY) ---
+# --- TAB 3: CUSTOMER CONTRACT AUDIT ---
 with tab_contract:
     st.markdown("### 📑 Customer Contract & Governing Quality Agreement")
     if not st.session_state["has_run_started"]:
@@ -752,7 +772,7 @@ with tab_contract:
             - **Liquidated Delay Penalty:** `{cust['delay_liquidated_damages']}`
             """)
 
-# --- TAB 4: THREAT PHYSICS (NO DUPLICATE MAP) ---
+# --- TAB 4: THREAT PHYSICS ---
 with tab_threat:
     st.markdown("### 🚨 Threat Ingestion & Excursion Physics")
     if not st.session_state["has_run_started"]:
@@ -803,7 +823,7 @@ with tab_gxp:
             )
 
 # =========================================================================
-# CONTINUOUS PHYSICAL VECTOR ENGINE & RUNTIME INCIDENT INGESTION
+# OSRM-POWERED CONTINUOUS VEHICLE ADVANCEMENT ENGINE
 # =========================================================================
 if st.session_state.get("is_running", False) and st.session_state.get("has_run_started", False):
     time.sleep(SIM_STEP_DELAY)
@@ -815,35 +835,35 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
     cust = st.session_state["active_customer"]
     f_sec = st.session_state["anomaly_trigger_sec"]
     
-    cur_lat, cur_lon = st.session_state["cur_lat"], st.session_state["cur_lon"]
-    t_lat, t_lon = st.session_state["target_coords"]
+    leg_pts = st.session_state["active_leg_points"]
+    pt_idx = st.session_state["leg_point_idx"]
     
-    # 1. NOMINAL STATE: Cruising along highway
+    # Advance along actual OSRM waypoints
+    if pt_idx < len(leg_pts) - 1:
+        st.session_state["leg_point_idx"] += 1
+        next_pt = leg_pts[st.session_state["leg_point_idx"]]
+        st.session_state["cur_lat"] = next_pt["lat"]
+        st.session_state["cur_lon"] = next_pt["lon"]
+        st.session_state["cur_meter"] += 160
+
+    # 1. NOMINAL STATE: Moving along main highway
     if s_state == "NOMINAL":
-        d_lat = (t_lat - cur_lat) * 0.03
-        d_lon = (t_lon - cur_lon) * 0.03
-        st.session_state["cur_lat"] += d_lat
-        st.session_state["cur_lon"] += d_lon
-        st.session_state["cur_meter"] += 120
         st.session_state["cur_temp"] = round(3.5 + random.uniform(-0.03, 0.03), 2)
-        
         st.session_state["run_logs"].append(
-            f"[T+{clock:02d}s] 📍 GPS ({st.session_state['cur_lat']:.5f}, {st.session_state['cur_lon']:.5f}) | Temp: {st.session_state['cur_temp']}°C | Odometer: {st.session_state['cur_meter']:,}m | NOMINAL_CRUISE"
+            f"[T+{clock:02d}s] 📍 GPS ({st.session_state['cur_lat']:.5f}, {st.session_state['cur_lon']:.5f}) | Temp: {st.session_state['cur_temp']}°C | Odometer: {st.session_state['cur_meter']:,}m | HIGHWAY_CRUISE"
         )
         
-        # Anomaly triggers dynamically
+        # Trigger runtime anomaly
         if clock >= f_sec:
             st.session_state["sim_state"] = "FAULT_DETECTED"
             st.session_state["cur_temp"] = 6.4
             
-            # Runtime selection of anomaly
             if st.session_state["selected_anomaly_id"] == "AUTO":
                 active_anom = random.choice(anomalies_pool)
             else:
                 active_anom = next(a for a in anomalies_pool if a["id"] == st.session_state["selected_anomaly_id"])
             st.session_state["active_anomaly"] = active_anom
             
-            # Runtime selection of curveball
             if st.session_state["selected_curveball"] == "AUTO":
                 chosen_cb = random.choice(["NONE", "POWER_OUTAGE", "DETOUR_BLOCKED", "SURGERY_MOVED_UP"])
             else:
@@ -855,15 +875,15 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             risk_usd = cust.get("valuation_usd", 470000)
             
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🚨 TELEMETRY ANOMALY INGESTED: {active_anom['name']} ({active_anom['fault_code']})!"
+                f"[T+{clock:02d}s] 🚨 SENSOR FAULT DETECTED: {active_anom['name']} ({active_anom['fault_code']})!"
             )
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 📑 Contract Audit: Ingesting {cust['contract_title']} | Valuation: ${risk_usd:,} USD"
+                f"[T+{clock:02d}s] 📑 Contract Audit: Triggered {cust['contract_title']} (Valuation: ${risk_usd:,} USD)"
             )
             if chosen_cb != "NONE":
                 st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ Active Corridor Modifier: {chosen_cb}")
             
-            # Call Gemini Agent
+            # Invoke Gemini Agent
             active_payload = json.loads(json.dumps(base_telemetry))
             active_payload["customer_data"] = cust
             active_payload["governing_sla_id"] = sla_key
@@ -887,7 +907,13 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
                 chosen_hub = cand_hubs[0]
                 
             st.session_state["chosen_hub"] = chosen_hub
-            st.session_state["target_coords"] = (chosen_hub["lat"], chosen_hub["lon"])
+            
+            # Stitch real OSRM detour route from current GPS position to chosen hub
+            detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], chosen_hub["lat"], chosen_hub["lon"])
+            detour_pts = resample_waypoints(detour_meta["waypoints"], target_count=18)
+            
+            st.session_state["active_leg_points"] = detour_pts
+            st.session_state["leg_point_idx"] = 0
             st.session_state["service_countdown"] = 14
             st.session_state["sim_state"] = "EN_ROUTE_HUB"
             
@@ -897,30 +923,24 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
                     f"[T+{clock:02d}s] 🤖 Agent: Executed `{s['tool_called']}` ➔ {st_str}"
                 )
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🚀 Detour Vector Dispatched: Navigating to AI Target: {chosen_hub['name']}."
+                f"[T+{clock:02d}s] 🚀 Detour Route Calculated: Navigating via OSRM roads to {chosen_hub['name']} ({detour_meta['distance_miles']} mi)."
             )
 
-    # 2. EN_ROUTE_HUB STATE: Detouring to AI's hub
+    # 2. EN_ROUTE_HUB STATE: Detouring to hub along real road points
     elif s_state == "EN_ROUTE_HUB":
-        d_lat = (t_lat - cur_lat) * 0.12
-        d_lon = (t_lon - cur_lon) * 0.12
-        st.session_state["cur_lat"] += d_lat
-        st.session_state["cur_lon"] += d_lon
-        st.session_state["cur_meter"] += 90
         st.session_state["cur_temp"] = round(min(7.35, st.session_state["cur_temp"] + 0.06), 2)
-        
         st.session_state["run_logs"].append(
-            f"[T+{clock:02d}s] 🛣️ Detour Transit: Heading to {st.session_state['chosen_hub']['name']}. Temp: {st.session_state['cur_temp']}°C."
+            f"[T+{clock:02d}s] 🛣️ Detour Transit: En route to {st.session_state['chosen_hub']['name']}. Temp: {st.session_state['cur_temp']}°C."
         )
         
-        dist_to_hub = math.hypot(t_lat - st.session_state["cur_lat"], t_lon - st.session_state["cur_lon"])
-        if dist_to_hub < 0.015:
+        # Check arrival at hub
+        if pt_idx >= len(leg_pts) - 1:
             st.session_state["sim_state"] = "SERVICING"
             st.session_state["run_logs"].append(
                 f"[T+{clock:02d}s] 🏢 Bay Arrival: Docked at {st.session_state['chosen_hub']['name']} Door #04. Servicing initiated."
             )
 
-    # 3. SERVICING STATE: Docked
+    # 3. SERVICING STATE: Replenishing cooling
     elif s_state == "SERVICING":
         st.session_state["service_countdown"] -= 1
         st.session_state["cur_temp"] = round(max(3.6, st.session_state["cur_temp"] - 0.28), 2)
@@ -931,34 +951,34 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
         
         if st.session_state["service_countdown"] <= 0:
             st.session_state["sim_state"] = "FINAL_LEG"
-            dest_lat = route_info["destination"]["lat"]
-            dest_lon = route_info["destination"]["lon"]
-            st.session_state["target_coords"] = (dest_lat, dest_lon)
+            
+            # Fetch real OSRM route from hub to hospital destination
+            dest = route_info["destination"]
+            hub = st.session_state["chosen_hub"]
+            final_meta = get_driving_route(hub["lat"], hub["lon"], dest["lat"], dest["lon"])
+            final_pts = resample_waypoints(final_meta["waypoints"], target_count=22)
+            
+            st.session_state["active_leg_points"] = final_pts
+            st.session_state["leg_point_idx"] = 0
+            
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] ✅ Servicing Complete: Thermal envelope restored (3.6°C). Departing for {cust['consignee_facility']}."
+                f"[T+{clock:02d}s] ✅ Servicing Complete: Thermal envelope restored (3.6°C). Merging onto highway to {cust['consignee_facility']}."
             )
 
-    # 4. FINAL_LEG STATE: High-speed transit to hospital
+    # 4. FINAL_LEG STATE: High-speed transit to destination
     elif s_state == "FINAL_LEG":
-        d_lat = (t_lat - cur_lat) * 0.10
-        d_lon = (t_lon - cur_lon) * 0.10
-        st.session_state["cur_lat"] += d_lat
-        st.session_state["cur_lon"] += d_lon
-        st.session_state["cur_meter"] += 140
         st.session_state["cur_temp"] = round(3.6 + random.uniform(-0.02, 0.02), 2)
-        
         st.session_state["run_logs"].append(
             f"[T+{clock:02d}s] 🛣️ Final Mile Approach: {st.session_state['cur_meter']:,}m traversed. Stabilized at {st.session_state['cur_temp']}°C."
         )
         
-        dist_to_dest = math.hypot(t_lat - st.session_state["cur_lat"], t_lon - st.session_state["cur_lon"])
-        if dist_to_dest < 0.02:
+        if pt_idx >= len(leg_pts) - 1:
             st.session_state["sim_state"] = "DELIVERED"
             st.session_state["is_running"] = False
             saved_total = cust.get("valuation_usd", 470000)
             
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🏥 Consignee Delivery Complete: Successfully delivered at {cust['consignee_facility']}. Zero batch spoilage! Preserved ${saved_total:,} USD under {cust['contract_title']}."
+                f"[T+{clock:02d}s] 🏥 Consignee Delivery Complete: Delivered at {cust['consignee_facility']}. Zero batch spoilage! Preserved ${saved_total:,} USD under {cust['contract_title']}."
             )
 
     # Record historical breadcrumb point
