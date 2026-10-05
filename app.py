@@ -24,7 +24,7 @@ RESOLUTION_LABELS = {
 }
 
 def format_tool_status(result_obj) -> str:
-    """Safely extracts a display status from tool returns of any type (dict, list, str)."""
+    """Safely extracts a display status from tool returns of any type."""
     if isinstance(result_obj, dict):
         return result_obj.get("status", result_obj.get("deviation_id", "CONFIRMED"))
     elif isinstance(result_obj, list):
@@ -36,7 +36,6 @@ def format_tool_status(result_obj) -> str:
 # --- HIGH-CONTRAST MISSION CONTROL DARK THEME ---
 st.markdown("""
 <style>
-    /* Global Background & Text */
     .stApp {
         background-color: #090d16 !important;
         color: #f8fafc !important;
@@ -45,39 +44,38 @@ st.markdown("""
         color: #f8fafc;
     }
     
-    /* Top Header */
     .main-header {
         background: #111827 !important;
         border: 1px solid #1f2937 !important;
         border-radius: 10px;
-        padding: 14px 22px;
+        padding: 16px 24px;
         margin-bottom: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     }
     
-    /* Mission Config Box */
     .config-card {
         background: #111827 !important;
         border: 1.5px solid #1f2937 !important;
         border-radius: 8px;
-        padding: 14px 18px;
+        padding: 14px 20px;
         margin-bottom: 14px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-    /* Form Controls & Selectboxes (High-Visibility Dark Styling) */
+    /* Selectbox Styling */
     .stSelectbox label {
         color: #94a3b8 !important;
         font-weight: 700 !important;
-        font-size: 0.82rem !important;
+        font-size: 0.78rem !important;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.6px;
     }
     div[data-baseweb="select"] > div {
         background-color: #1e293b !important;
-        border-color: #334155 !important;
+        border: 1px solid #334155 !important;
         color: #f8fafc !important;
         border-radius: 6px !important;
+        height: 42px !important;
     }
     div[data-baseweb="select"] * {
         color: #f8fafc !important;
@@ -93,12 +91,13 @@ st.markdown("""
         background-color: #0284c7 !important;
     }
 
-    /* Buttons */
+    /* Standardized Buttons */
     .stButton > button {
         border-radius: 6px !important;
         font-weight: 700 !important;
         font-size: 0.85rem !important;
-        padding: 8px 14px !important;
+        height: 42px !important;
+        padding: 0 16px !important;
     }
     .stButton > button[kind="primary"] {
         background-color: #0284c7 !important;
@@ -127,7 +126,7 @@ st.markdown("""
         flex: 1;
         padding: 8px 6px;
         border-radius: 6px;
-        font-size: 0.75rem;
+        font-size: 0.74rem;
         font-weight: 700;
         text-align: center;
         border: 1px solid #1f2937;
@@ -135,14 +134,14 @@ st.markdown("""
     .phase-idle { background: #111827 !important; color: #64748b !important; }
     .phase-active { background: #0369a1 !important; color: #ffffff !important; border-color: #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
     .phase-done { background: #14532d !important; color: #4ade80 !important; border-color: #22c55e !important; }
-    .phase-alert { background: #7f1d1d !important; color: #fca5a5 !important; border-color: #ef4444 !important; animation: pulse 1.5s infinite; }
+    .phase-alert { background: #7f1d1d !important; color: #fca5a5 !important; border-color: #ef4444 !important; }
 
     /* KPI Summary Cards */
     .kpi-card {
         background-color: #111827 !important;
         border: 1px solid #1f2937 !important;
         border-radius: 8px;
-        padding: 12px 14px;
+        padding: 14px 16px;
         text-align: left;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
@@ -151,47 +150,56 @@ st.markdown("""
         font-size: 0.74rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.6px;
     }
     .kpi-num {
         font-size: 1.55rem;
         font-weight: 800;
-        margin: 2px 0;
+        margin: 3px 0;
     }
     .bad { color: #f87171 !important; }
     .good { color: #4ade80 !important; }
     .warn { color: #fbbf24 !important; }
 
-    /* Cognitive Monologue Box */
-    .thought-box {
-        background-color: #064e3b !important;
+    /* Structured Cognitive Monologue Box */
+    .thought-container {
+        background: #064e3b !important;
         border: 1.5px solid #059669 !important;
         border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 12px;
-        box-shadow: 0 0 15px rgba(5, 150, 105, 0.2);
+        padding: 14px 18px;
+        margin-bottom: 14px;
+        box-shadow: 0 0 16px rgba(5, 150, 105, 0.25);
     }
-    .thought-box * {
-        color: #a7f3d0 !important;
+    .thought-stage-pill {
+        display: inline-block;
+        font-weight: 800;
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-right: 6px;
+        letter-spacing: 0.5px;
     }
+    .stage-threat { background: #7f1d1d; color: #fee2e2; }
+    .stage-contract { background: #1e3a8a; color: #dbeafe; }
+    .stage-tradeoff { background: #78350f; color: #fef3c7; }
+    .stage-action { background: #065f46; color: #d1fae5; }
 
     /* Live Stream Log Box */
     .log-box {
         background-color: #020617 !important;
         border: 1.5px solid #1e293b !important;
         border-radius: 8px;
-        padding: 12px;
+        padding: 14px;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         font-size: 0.80rem;
         height: 380px;
         overflow-y: auto;
         color: #e2e8f0 !important;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
     }
     .log-line {
         padding: 3px 0;
         border-bottom: 1px solid #0f172a;
-        line-height: 1.4;
+        line-height: 1.45;
     }
 
     /* Tabs Styling */
@@ -209,7 +217,7 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] p {
         color: #94a3b8 !important;
         font-weight: 600 !important;
-        font-size: 0.9rem !important;
+        font-size: 0.88rem !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #1e293b !important;
@@ -237,7 +245,6 @@ st.markdown("""
         border: 1px solid #334155 !important;
         padding: 2px 5px !important;
         border-radius: 4px !important;
-        font-family: ui-monospace, monospace !important;
     }
     [data-testid="stExpander"] {
         background-color: #111827 !important;
@@ -250,7 +257,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Map Configuration (Dark Matter)
+# Plotly Dark Matter Map Config
 if hasattr(go, "Scattermap"):
     MapTrace = go.Scattermap
     map_config = dict(map_style="carto-darkmatter")
@@ -258,9 +265,11 @@ else:
     MapTrace = getattr(go, "Scattermapbox", go.Scatter)
     map_config = dict(mapbox_style="carto-darkmatter")
 
-# Load Databases
+# Load All Enterprise Databases
 @st.cache_data
 def load_all_databases():
+    with open("data/customers.json", "r") as f:
+        customers = json.load(f)
     with open("data/anomalies.json", "r") as f:
         anomalies = json.load(f)
     with open("data/sla_contracts.json", "r") as f:
@@ -269,9 +278,9 @@ def load_all_databases():
         routes = json.load(f)
     with open("data/telemetry_stream.json", "r") as f:
         raw_telemetry = json.load(f)
-    return anomalies, slas, routes, raw_telemetry
+    return customers, anomalies, slas, routes, raw_telemetry
 
-anomalies_pool, slas_db, routes_pool, base_telemetry = load_all_databases()
+customers_pool, anomalies_pool, slas_db, routes_pool, base_telemetry = load_all_databases()
 
 # Session State Initialization (Blank Slate by Default)
 if "has_run_started" not in st.session_state:
@@ -297,6 +306,8 @@ if "service_countdown" not in st.session_state:
 if "passed_points" not in st.session_state:
     st.session_state["passed_points"] = []
 
+if "active_customer" not in st.session_state:
+    st.session_state["active_customer"] = None
 if "active_route" not in st.session_state:
     st.session_state["active_route"] = None
 if "chosen_hub" not in st.session_state:
@@ -310,6 +321,8 @@ if "active_curveball" not in st.session_state:
 if "mission_result" not in st.session_state:
     st.session_state["mission_result"] = None
 
+if "selected_customer_id" not in st.session_state:
+    st.session_state["selected_customer_id"] = "AUTO"
 if "selected_anomaly_id" not in st.session_state:
     st.session_state["selected_anomaly_id"] = "AUTO"
 if "selected_curveball" not in st.session_state:
@@ -327,10 +340,10 @@ st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
             <h2 style="margin: 0; color: #f8fafc; font-weight: 800; font-size: 1.55rem;">🧊 CryoGuard AI™ | Operations Commander</h2>
-            <span style="color: #94a3b8; font-size: 0.88rem; font-weight: 500;">Autonomous Post-Sales SLA Risk Defense & Closed-Loop Regulatory Preservation</span>
+            <span style="color: #94a3b8; font-size: 0.86rem; font-weight: 500;">Multi-Customer Autonomous SLA Defense & Regulatory Life Sciences Preservation</span>
         </div>
         <div style="text-align: right;">
-            <span style="background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">
+            <span style="background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 14px; border-radius: 20px; font-size: 0.80rem; font-weight: 700;">
                 {active_corr_label}
             </span>
         </div>
@@ -339,19 +352,35 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================================================================
-# 1. DYNAMIC MISSION CONFIGURATION PANEL (FULLY VISIBLE DROPDOWNS)
+# 1. DYNAMIC MISSION CONFIGURATION PANEL
 # =========================================================================
 with st.container():
     st.markdown('<div class="config-card">', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns([1.5, 1.5, 1.2, 1.2])
+    c1, c2, c3, c4, c5 = st.columns([1.3, 1.3, 1.3, 1.0, 1.0])
 
     with c1:
-        anomaly_opts = {"AUTO": "🎲 Auto (Randomize when fault occurs)"}
+        # Customer Selection
+        cust_opts = {"AUTO": "🎲 Auto (Random Sponsor)"}
+        for c in customers_pool:
+            cust_opts[c["customer_id"]] = f"{c['customer_name']} ({c['drug_product'][:22]}...)"
+        
+        sel_cust = st.selectbox(
+            "Customer Sponsor & Cargo:",
+            options=list(cust_opts.keys()),
+            format_func=lambda k: cust_opts[k],
+            index=list(cust_opts.keys()).index(st.session_state["selected_customer_id"]),
+            disabled=st.session_state["is_running"]
+        )
+        st.session_state["selected_customer_id"] = sel_cust
+
+    with c2:
+        # Anomaly Selection
+        anomaly_opts = {"AUTO": "🎲 Auto (Dynamic Runtime Fault)"}
         for a in anomalies_pool:
             anomaly_opts[a["id"]] = f"{a['name']} ({a['category']})"
         
         sel_anom = st.selectbox(
-            "Incident Anomaly Protocol:",
+            "Anomaly Protocol:",
             options=list(anomaly_opts.keys()),
             format_func=lambda k: anomaly_opts[k],
             index=list(anomaly_opts.keys()).index(st.session_state["selected_anomaly_id"]),
@@ -359,7 +388,8 @@ with st.container():
         )
         st.session_state["selected_anomaly_id"] = sel_anom
 
-    with c2:
+    with c3:
+        # Curveball Selection
         curveball_opts = {
             "AUTO": "🎲 Auto (Evaluate during triage)",
             "NONE": "Nominal Protocol (No Curveball)",
@@ -368,7 +398,7 @@ with st.container():
             "SURGERY_MOVED_UP": "🏥 Surgery Time Accelerated (-45m SLA)"
         }
         sel_cb = st.selectbox(
-            "Operational Curveball Modifier:",
+            "Corridor Modifier:",
             options=list(curveball_opts.keys()),
             format_func=lambda k: curveball_opts[k],
             index=list(curveball_opts.keys()).index(st.session_state["selected_curveball"]),
@@ -376,16 +406,23 @@ with st.container():
         )
         st.session_state["selected_curveball"] = sel_cb
 
-    with c3:
+    with c4:
+        st.write("")
         st.write("")
         if not st.session_state["is_running"]:
-            if st.button("▶️ Launch Mission", type="primary", use_container_width=True):
+            if st.button("▶️ Launch", type="primary", use_container_width=True):
                 chosen_route = random.choice(routes_pool)
                 
-                # We DO NOT pre-assign anomaly or SLA! They will be sampled at runtime.
+                # Customer Sponsor Selection
+                if st.session_state["selected_customer_id"] == "AUTO":
+                    chosen_cust = random.choice(customers_pool)
+                else:
+                    chosen_cust = next(c for c in customers_pool if c["customer_id"] == st.session_state["selected_customer_id"])
+
+                st.session_state["active_customer"] = chosen_cust
                 st.session_state["active_route"] = chosen_route
-                st.session_state["active_anomaly"] = None  # chosen dynamically at fault
-                st.session_state["chosen_hub"] = None      # chosen dynamically by AI
+                st.session_state["active_anomaly"] = None
+                st.session_state["chosen_hub"] = None
                 st.session_state["active_curveball"] = "NONE"
                 st.session_state["anomaly_trigger_sec"] = random.randint(16, 24)
                 
@@ -405,23 +442,26 @@ with st.container():
                 st.session_state["has_run_started"] = True
                 st.session_state["run_logs"] = [
                     f"[T+00s] 🟢 Fleet telematics online. Unit #409 departed {chosen_route['origin']['name']}.",
-                    f"[T+00s] 📋 Active Corridor: {chosen_route['corridor_name']} | Consignee: {chosen_route['destination_facility']}",
-                    f"[T+00s] 📦 Cargo Manifest: Autologous Life Sciences Batch | Telemetry: Nominal 3.5°C"
+                    f"[T+00s] 🏢 Sponsor: {chosen_cust['customer_name']} | Agreement: {chosen_cust['contract_title']}",
+                    f"[T+00s] 📦 Drug Therapy: {chosen_cust['drug_product']} (Valuation: ${chosen_cust['valuation_usd']:,} USD)",
+                    f"[T+00s] 🏥 Consignee Facility: {chosen_cust['consignee_facility']} | Telemetry: Nominal 3.5°C"
                 ]
                 st.session_state["is_running"] = True
                 st.rerun()
         else:
-            if st.button("⏹ Stop Run", type="secondary", use_container_width=True):
+            if st.button("⏹ Stop", type="secondary", use_container_width=True):
                 st.session_state["is_running"] = False
                 st.rerun()
 
-    with c4:
+    with c5:
         st.write("")
-        if st.button("🔄 Reset Mission", type="secondary", use_container_width=True):
+        st.write("")
+        if st.button("🔄 Reset", type="secondary", use_container_width=True):
             st.session_state["has_run_started"] = False
             st.session_state["is_running"] = False
             st.session_state["mission_clock"] = 0
             st.session_state["sim_state"] = "STANDBY"
+            st.session_state["active_customer"] = None
             st.session_state["active_route"] = None
             st.session_state["chosen_hub"] = None
             st.session_state["active_anomaly"] = None
@@ -433,21 +473,25 @@ with st.container():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Mission Clock Bar (Pure Open-Ended Stopwatch)
+# Mission Clock & Mid-Flight Curveball Bar
 bar_c1, bar_c2 = st.columns([2, 1.2])
 with bar_c1:
     if st.session_state["has_run_started"]:
         cur_sec = st.session_state["mission_clock"]
+        cust_badge = st.session_state['active_customer']['customer_name']
         st.markdown(f"""
         <div style="padding: 2px 0 6px 0;">
             <span style="font-size: 1.35rem; font-weight: 800; color: #f8fafc;">⏱️ Mission Clock: T+{cur_sec:02d}s</span>
             <span style="margin-left: 12px; font-size: 0.88rem; color: #38bdf8; font-family: ui-monospace, monospace; font-weight: 700;">
                 {st.session_state['cur_meter']:,}m | ({st.session_state['cur_lat']:.5f}, {st.session_state['cur_lon']:.5f})
             </span>
+            <span style="margin-left: 12px; background: #1e293b; color: #94a3b8; font-size: 0.8rem; padding: 4px 10px; border-radius: 4px;">
+                Client: <b>{cust_badge}</b>
+            </span>
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.markdown("<div style='padding-top: 4px;'><span style='color: #64748b; font-weight: 600;'>Mission Standby — Select scenario and click Launch</span></div>", unsafe_allow_html=True)
+        st.markdown("<div style='padding-top: 4px;'><span style='color: #64748b; font-weight: 600;'>Mission Standby — Select customer parameters and click Launch</span></div>", unsafe_allow_html=True)
 
 with bar_c2:
     if st.session_state["has_run_started"] and st.session_state["is_running"]:
@@ -497,16 +541,16 @@ else:
     cur_temp = st.session_state["cur_temp"]
     is_hot = cur_temp > 6.0
     anom = st.session_state["active_anomaly"]
+    cust = st.session_state["active_customer"]
 
-    # If anomaly has occurred, pull dynamic SLA parameters
-    if anom:
-        sla_key = anom.get("sla_governed", "SLA-COLD-2TO8")
+    if anom and cust:
+        sla_key = anom.get("sla_governed", cust.get("governing_sla_id", "SLA-COLD-2TO8"))
         governing_sla = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
-        sla_exposure_usd = governing_sla.get("liability_amount_usd", 470000)
+        sla_exposure_usd = cust.get("valuation_usd", 470000)
         ceiling_temp = governing_sla.get("excursion_ceiling", 8.0)
         band_spec = governing_sla.get("thermal_band", "+2.0°C to +8.0°C")
     else:
-        sla_exposure_usd = 470000
+        sla_exposure_usd = cust.get("valuation_usd", 470000) if cust else 470000
         ceiling_temp = 8.0
         band_spec = "+2.0°C to +8.0°C"
         sla_key = "PENDING_INCIDENT"
@@ -524,53 +568,64 @@ else:
         if is_hot:
             expo_str = f"${sla_exposure_usd:,}"
             expo_col = "bad"
-            expo_sub = f"Exposed under {sla_key}"
+            expo_sub = f"Liability: {cust.get('customer_name')[:20]}"
         elif st.session_state["sim_state"] == "DELIVERED":
             if st.session_state["is_partial_breach"]:
                 partial_pen = 5000
                 saved_net = sla_exposure_usd - partial_pen
                 expo_str = f"${saved_net:,} SAVED"
                 expo_col = "warn"
-                expo_sub = f"⚠️ ${partial_pen:,} delay fee deducted ({sla_key})"
+                expo_sub = f"⚠️ ${partial_pen:,} penalty deducted"
             else:
                 expo_str = f"${sla_exposure_usd:,} SAVED"
                 expo_col = "good"
-                expo_sub = f"Zero penalties incurred under {sla_key}"
+                expo_sub = f"Zero penalties for {cust.get('customer_name')[:18]}"
         else:
             expo_str = "$0 AT RISK"
             expo_col = "good"
-            expo_sub = "Nominal Transit Protocol"
+            expo_sub = f"Insured: ${sla_exposure_usd:,} USD"
 
         st.markdown(f"<div class='kpi-card'><div class='kpi-title'>Financial Protection</div><div class='kpi-num {expo_col}'>{expo_str}</div><div style='font-size: 0.75rem; color: #94a3b8;'>{expo_sub}</div></div>", unsafe_allow_html=True)
 
 # =========================================================================
-# LIVE COGNITIVE STREAM (AI INNER MONOLOGUE)
+# STRUCTURED COGNITIVE STREAM (AI INNER MONOLOGUE)
 # =========================================================================
 if st.session_state["has_run_started"] and st.session_state["mission_result"]:
     res = st.session_state["mission_result"]
-    thoughts = list(res.get("cognitive_monologue", []))
+    raw_thoughts = list(res.get("cognitive_monologue", []))
 
-    if thoughts:
+    if raw_thoughts:
+        st.markdown('<div class="thought-container">', unsafe_allow_html=True)
         st.markdown(f"""
-        <div class="thought-box">
-            <div style="font-weight: 800; font-size: 0.88rem; margin-bottom: 4px; display: flex; justify-content: space-between;">
-                <span>🧠 Gemini Live Cognitive Deliberation Feed (Engine: {', '.join(res['models_involved'])})</span>
-                <span style="font-size: 0.78rem; font-weight: 600;">Verified Multi-Turn Autonomous Reasoning</span>
-            </div>
-            <div style="font-size: 0.85rem; line-height: 1.45;">
-                {'<br>'.join([f"• {t}" for t in thoughts])}
-            </div>
+        <div style="font-weight: 800; font-size: 0.88rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #6ee7b7;">🧠 Gemini Live Cognitive Deliberation Feed (Engine: {', '.join(res['models_involved'])})</span>
+            <span style="background: #047857; color: #ecfdf5; font-size: 0.75rem; font-weight: 700; padding: 2px 10px; border-radius: 12px;">
+                Verified Multi-Turn Reasoning
+            </span>
         </div>
         """, unsafe_allow_html=True)
+
+        for thought in raw_thoughts:
+            # Format structured reasoning pills
+            formatted_thought = thought
+            formatted_thought = formatted_thought.replace("[THREAT ANALYSIS]:", '<span class="thought-stage-pill stage-threat">THREAT ANALYSIS</span>')
+            formatted_thought = formatted_thought.replace("[CONTRACT AUDIT]:", '<span class="thought-stage-pill stage-contract">CONTRACT AUDIT</span>')
+            formatted_thought = formatted_thought.replace("[FACILITY TRADE-OFF]:", '<span class="thought-stage-pill stage-tradeoff">FACILITY TRADE-OFF</span>')
+            formatted_thought = formatted_thought.replace("[DISPATCH ACTION]:", '<span class="thought-stage-pill stage-action">DISPATCH ACTION</span>')
+            
+            st.markdown(f"<div style='margin-bottom: 6px; font-size: 0.84rem; line-height: 1.45; color: #d1fae5;'>{formatted_thought}</div>", unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================================
 # OPERATIONAL SECTION HEADERS AS TABS
 # =========================================================================
-tab_unified, tab_threat, tab_agent, tab_gxp = st.tabs([
-    "🖥️ Unified Live Stream & Map",
-    "🚨 Threat Physics & Curve",
-    "🤖 Autonomous Agent Engine",
-    "📑 GxP Audit & SLA Contracts"
+tab_unified, tab_agent, tab_contract, tab_threat, tab_gxp = st.tabs([
+    "🖥️ Unified Live Telematics & Log Stream",
+    "🤖 Agent Tool Trace & Function Execution",
+    "📑 Customer Contract & Governing Agreement",
+    "🚨 Threat Physics & Thermal Excursion Curve",
+    "📜 Certified GxP / FDA 21 CFR Part 11 Audit Log"
 ])
 
 # --- TAB 1: UNIFIED STREAM (STRICTLY 1 MAP ON SCREEN) ---
@@ -637,7 +692,7 @@ with tab_unified:
     with log_col:
         st.markdown("<h5 style='margin-bottom: 6px;'>📜 Real-Time Autonomous Operations Log Stream</h5>", unsafe_allow_html=True)
         if not st.session_state["has_run_started"]:
-            log_html = '<div class="log-box"><div class="log-line">[T+00s] ⚪ System in standby. Select parameters and click "Launch Mission".</div></div>'
+            log_html = '<div class="log-box"><div class="log-line">[T+00s] ⚪ System in standby. Select customer parameters and click "Launch".</div></div>'
         else:
             log_html = '<div class="log-box">'
             for entry in reversed(st.session_state["run_logs"]):
@@ -645,7 +700,59 @@ with tab_unified:
             log_html += '</div>'
         st.markdown(log_html, unsafe_allow_html=True)
 
-# --- TAB 2: THREAT PHYSICS (NO DUPLICATE MAP) ---
+# --- TAB 2: AGENT TOOL TRACE ---
+with tab_agent:
+    st.markdown("### 🤖 Autonomous Agent Reasoning & Function Calling Engine")
+    if not st.session_state["has_run_started"]:
+        st.info("Agent is standing by. Click 'Launch' to awaken the Gemini decision loop.")
+    elif not st.session_state["mission_result"]:
+        st.info("Autonomous agent in standby monitoring mode. Anomaly detection pending...")
+    else:
+        res = st.session_state["mission_result"]
+        st.success(f"✅ Mission Orchestration Active: {res['steps_executed']} Autonomous Operations Executed via Gemini ({', '.join(res['models_involved'])})")
+
+        for step in res["trace"]:
+            st.markdown(f"""
+            <div style="background: #111827; border-left: 4px solid #38bdf8; border: 1.5px solid #1f2937; padding: 10px 14px; margin-bottom: 8px; border-radius: 4px;">
+                <span style="font-weight: 700; color: #f8fafc;">Step {step['step']}: <code>{step['tool_called']}</code></span>
+                <span style="color: #94a3b8; font-size: 0.8rem; margin-left: 10px;">Model: {step['model_engine']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+            st.json(step["result"])
+
+# --- TAB 3: CUSTOMER CONTRACT AUDIT (DYNAMIC AGREEMENT DISPLAY) ---
+with tab_contract:
+    st.markdown("### 📑 Customer Contract & Governing Quality Agreement")
+    if not st.session_state["has_run_started"]:
+        st.info("System in standby. Sponsor Quality Agreement will render upon mission launch.")
+    else:
+        cust = st.session_state["active_customer"]
+        anom = st.session_state["active_anomaly"]
+        sla_key = anom.get("sla_governed", cust.get("governing_sla_id", "SLA-COLD-2TO8")) if anom else cust.get("governing_sla_id", "SLA-COLD-2TO8")
+        sla_val = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
+
+        c_c1, c_c2 = st.columns(2)
+        with c_c1:
+            st.markdown(f"""
+            #### 🏢 Commercial Sponsor Profile
+            - **Client Organization:** `{cust['customer_name']}` (ID: `{cust['customer_id']}`)
+            - **Therapeutic Asset:** `{cust['drug_product']}`
+            - **Batch Lot Number:** `{cust['batch_lot']}`
+            - **Commercial Valuation:** `${cust['valuation_usd']:,} USD`
+            - **Consignee Medical Facility:** `{cust['consignee_facility']}`
+            """)
+        with c_c2:
+            st.markdown(f"""
+            #### 📜 Governing Legal Quality Agreement
+            - **Agreement Title:** `{cust['contract_title']}`
+            - **SLA Schedule Tier:** `{sla_val['name']}` (`{sla_key}`)
+            - **Qualified Thermal Band:** `{sla_val['thermal_band']}`
+            - **Regulatory Excursion Ceiling:** `{sla_val['excursion_ceiling']}°C`
+            - **Max Allowed Excursion Window:** `{cust.get('allowed_excursion_mins', 60)} minutes`
+            - **Liquidated Delay Penalty:** `{cust['delay_liquidated_damages']}`
+            """)
+
+# --- TAB 4: THREAT PHYSICS (NO DUPLICATE MAP) ---
 with tab_threat:
     st.markdown("### 🚨 Threat Ingestion & Excursion Physics")
     if not st.session_state["has_run_started"]:
@@ -661,7 +768,7 @@ with tab_threat:
             - **Incident Anomaly:** `{anom_name}`
             - **Fault Code:** `{fault_code}`
             - **Active Target Facility:** **{hub_name}**
-            - **Active Curveball:** `{st.session_state.get('active_curveball', 'NONE')}`
+            - **Active Curveball Modifier:** `{st.session_state.get('active_curveball', 'NONE')}`
             - **Operational State:** `{st.session_state['sim_state']}`
             """)
         with t_c2:
@@ -678,54 +785,22 @@ with tab_threat:
             fig_t.update_layout(title="Dynamic Sensor Trajectory (°C vs Time)", xaxis_title="Seconds Elapsed", yaxis_title="Temp (°C)", template="plotly_dark", height=260, margin=dict(l=20, r=20, t=35, b=20))
             st.plotly_chart(fig_t, use_container_width=True)
 
-# --- TAB 3: AGENT REASONING ENGINE ---
-with tab_agent:
-    st.markdown("### 🤖 Autonomous Agent Reasoning & Function Calling Engine")
-    if not st.session_state["has_run_started"]:
-        st.info("Agent is standing by. Click 'Launch Mission' to awaken the Gemini autonomous decision loop.")
-    elif not st.session_state["mission_result"]:
-        st.info("Autonomous agent in standby monitoring mode. Anomaly detection pending...")
+# --- TAB 5: GXP AUDIT ---
+with tab_gxp:
+    st.markdown("### 📜 Certified GxP / FDA 21 CFR Part 11 Regulatory Audit Log")
+    if not st.session_state["has_run_started"] or not st.session_state["mission_result"]:
+        st.info("Regulatory CAPA deviation log will compile dynamically upon incident resolution.")
     else:
         res = st.session_state["mission_result"]
-        st.success(f"✅ Mission Orchestration Active: {res['steps_executed']} Autonomous Operations Executed via Gemini ({', '.join(res['models_involved'])})")
-
-        for step in res["trace"]:
-            st.markdown(f"""
-            <div style="background: #111827; border-left: 4px solid #38bdf8; border: 1.5px solid #1f2937; padding: 10px 14px; margin-bottom: 8px; border-radius: 4px;">
-                <span style="font-weight: 700; color: #f8fafc;">Step {step['step']}: <code>{step['tool_called']}</code></span>
-                <span style="color: #94a3b8; font-size: 0.8rem; margin-left: 10px;">Model: {step['model_engine']}</span>
-            </div>
-            """, unsafe_allow_html=True)
-            st.json(step["result"])
-
-# --- TAB 4: GXP AUDIT ---
-with tab_gxp:
-    st.markdown("### 📑 Enterprise SLA Portfolio & GxP Regulatory Audit")
-    if not st.session_state["has_run_started"]:
-        st.info("System in standby. SLA and CAPA forms will compile upon mission execution.")
-    else:
-        g1, g2 = st.columns([1, 1.2])
-        with g1:
-            st.markdown("#### 📜 Governing SLA Schedule")
-            if anom:
-                sla_val = slas_db.get(anom.get("sla_governed", "SLA-COLD-2TO8"))
-                st.markdown(f"""
-                - **Name:** `{sla_val['name']}`
-                - **Thermal Band:** `{sla_val['thermal_band']}`
-                - **Excursion Ceiling:** `{sla_val['excursion_ceiling']}°C`
-                - **Max Allowed Window:** `{sla_val['max_cumulative_excursion_mins']} mins`
-                - **Contractual Liability:** `${sla_val.get('liability_amount_usd', 470000):,} USD`
-                """)
-            else:
-                st.info("Awaiting anomaly ingestion to link governing Quality Agreement SLA schedule.")
-        with g2:
-            st.markdown("#### 📑 GxP Deviation Notice")
-            if st.session_state["mission_result"]:
-                res = st.session_state["mission_result"]
-                gxp_report = next((s["result"] for s in res["trace"] if s["tool_called"] == "generate_gxp_deviation_report"), None)
-                if gxp_report:
-                    st.json(gxp_report)
-                    st.download_button(label="📥 Download Certified GxP Notice", data=json.dumps(gxp_report, indent=2), file_name=f"GxP_Deviation_{res['incident_id']}.json", mime="application/json")
+        gxp_report = next((s["result"] for s in res["trace"] if s["tool_called"] == "generate_gxp_deviation_report"), None)
+        if gxp_report:
+            st.json(gxp_report)
+            st.download_button(
+                label="📥 Download Certified GxP Deviation Notice (JSON)",
+                data=json.dumps(gxp_report, indent=2),
+                file_name=f"GxP_Deviation_{res['incident_id']}.json",
+                mime="application/json"
+            )
 
 # =========================================================================
 # CONTINUOUS PHYSICAL VECTOR ENGINE & RUNTIME INCIDENT INGESTION
@@ -737,6 +812,7 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
     clock = st.session_state["mission_clock"]
     s_state = st.session_state["sim_state"]
     route_info = st.session_state["active_route"]
+    cust = st.session_state["active_customer"]
     f_sec = st.session_state["anomaly_trigger_sec"]
     
     cur_lat, cur_lon = st.session_state["cur_lat"], st.session_state["cur_lon"]
@@ -755,41 +831,41 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             f"[T+{clock:02d}s] 📍 GPS ({st.session_state['cur_lat']:.5f}, {st.session_state['cur_lon']:.5f}) | Temp: {st.session_state['cur_temp']}°C | Odometer: {st.session_state['cur_meter']:,}m | NOMINAL_CRUISE"
         )
         
-        # Anomaly triggers at randomized second
+        # Anomaly triggers dynamically
         if clock >= f_sec:
             st.session_state["sim_state"] = "FAULT_DETECTED"
             st.session_state["cur_temp"] = 6.4
             
-            # RUNTIME DYNAMIC SELECTION OF ANOMALY
+            # Runtime selection of anomaly
             if st.session_state["selected_anomaly_id"] == "AUTO":
                 active_anom = random.choice(anomalies_pool)
             else:
                 active_anom = next(a for a in anomalies_pool if a["id"] == st.session_state["selected_anomaly_id"])
             st.session_state["active_anomaly"] = active_anom
             
-            # RUNTIME DYNAMIC SELECTION OF CURVEBALL
+            # Runtime selection of curveball
             if st.session_state["selected_curveball"] == "AUTO":
                 chosen_cb = random.choice(["NONE", "POWER_OUTAGE", "DETOUR_BLOCKED", "SURGERY_MOVED_UP"])
             else:
                 chosen_cb = st.session_state["selected_curveball"]
             st.session_state["active_curveball"] = chosen_cb
 
-            # DYNAMIC SLA LOOKUP
-            sla_key = active_anom.get("sla_governed", "SLA-COLD-2TO8")
+            sla_key = active_anom.get("sla_governed", cust.get("governing_sla_id", "SLA-COLD-2TO8"))
             matched_sla = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
-            risk_usd = matched_sla.get("liability_amount_usd", 470000)
+            risk_usd = cust.get("valuation_usd", 470000)
             
             st.session_state["run_logs"].append(
                 f"[T+{clock:02d}s] 🚨 TELEMETRY ANOMALY INGESTED: {active_anom['name']} ({active_anom['fault_code']})!"
             )
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 📑 SLA Ingestion: Governed by {matched_sla['name']} | Exposure Cap: ${risk_usd:,} USD"
+                f"[T+{clock:02d}s] 📑 Contract Audit: Ingesting {cust['contract_title']} | Valuation: ${risk_usd:,} USD"
             )
             if chosen_cb != "NONE":
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️️ Active Corridor Modifier: {chosen_cb}")
+                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ Active Corridor Modifier: {chosen_cb}")
             
-            # Execute Gemini Agent
+            # Call Gemini Agent
             active_payload = json.loads(json.dumps(base_telemetry))
+            active_payload["customer_data"] = cust
             active_payload["governing_sla_id"] = sla_key
             active_payload["candidate_hubs"] = route_info.get("candidate_hubs", [])
             active_payload["curveball_condition"] = chosen_cb
@@ -801,7 +877,7 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             res = run_cryoguard_mission(active_payload, is_replan=False)
             st.session_state["mission_result"] = res
             
-            # Determine AI's chosen hub
+            # Identify AI's chosen hub
             res_dock_call = next((s for s in res["trace"] if s["tool_called"] == "reserve_dock_replenishment"), None)
             cand_hubs = route_info.get("candidate_hubs", [])
             if res_dock_call:
@@ -859,7 +935,7 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             dest_lon = route_info["destination"]["lon"]
             st.session_state["target_coords"] = (dest_lat, dest_lon)
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] ✅ Servicing Complete: Thermal envelope restored (3.6°C). Departing for {route_info['destination_facility']}."
+                f"[T+{clock:02d}s] ✅ Servicing Complete: Thermal envelope restored (3.6°C). Departing for {cust['consignee_facility']}."
             )
 
     # 4. FINAL_LEG STATE: High-speed transit to hospital
@@ -879,14 +955,10 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
         if dist_to_dest < 0.02:
             st.session_state["sim_state"] = "DELIVERED"
             st.session_state["is_running"] = False
-            
-            anom = st.session_state["active_anomaly"]
-            sla_key = anom.get("sla_governed", "SLA-COLD-2TO8")
-            matched_sla = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
-            saved_total = matched_sla.get("liability_amount_usd", 470000)
+            saved_total = cust.get("valuation_usd", 470000)
             
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🏥 Consignee Delivery Complete: Successfully delivered at {route_info['destination_facility']}. Zero batch spoilage! Preserved ${saved_total:,} USD under {matched_sla['name']}."
+                f"[T+{clock:02d}s] 🏥 Consignee Delivery Complete: Successfully delivered at {cust['consignee_facility']}. Zero batch spoilage! Preserved ${saved_total:,} USD under {cust['contract_title']}."
             )
 
     # Record historical breadcrumb point

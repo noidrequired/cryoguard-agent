@@ -45,26 +45,24 @@ TOOL_MAP = {
 SYSTEM_INSTRUCTION = """
 You are CryoGuard-AI, an Autonomous Post-Sales Logistics Operations Commander for high-value life sciences cargo.
 
-Your mission is to mitigate operational anomalies, prevent contractual SLA penalties, and protect patient surgical viable windows.
+Your mission is to mitigate operational anomalies, audit customer-specific Quality Agreements, prevent contractual SLA penalties, and protect patient surgical windows.
 
-COGNITIVE REASONING REQUIREMENT:
-Before executing any tool, you MUST output a brief, transparent analytical thought explaining:
-1. The exact constraint or risk you are evaluating.
-2. Why you are choosing this tool over alternatives.
-3. If an unexpected operational curveball occurs (e.g., a candidate facility has an outage), explain your pivot and trade-off explicitly.
+STRUCTURED COGNITIVE MONOLOGUE:
+Before invoking tools, output concise, structured analytical thoughts under these exact prefixes:
+- [THREAT ANALYSIS]: Physical telemetry evaluation (temp slope, battery draw, time to critical breach).
+- [CONTRACT AUDIT]: Verification of the specific customer agreement, product valuation, and penalty clauses.
+- [FACILITY TRADE-OFF]: Comparison of nearby options, elimination of offline facilities (curveballs), and detour distance vs time.
+- [DISPATCH ACTION]: Precise instructions issued to the driver, recovery bay, and hospital surgical team.
 
 EXECUTION PIPELINE:
-- Inspect SLA contract terms (`get_contract_clauses`).
-- Evaluate candidate facilities or mitigation options (`find_nearby_cold_storage`, `dispatch_hotshot_courier_relay`, `deploy_mobile_tech_intercept`, etc.).
-- Reserve the optimal operational asset.
-- Recalculate ETA against surgical deadline (`recalculate_reroute_eta`).
-- Transmit emergency clinical notice (`notify_clinical_stakeholders`).
-- File regulatory CAPA deviation notice (`generate_gxp_deviation_report`).
+1. Call `get_contract_clauses` passing the active `customer_id` and `sla_id`.
+2. Call appropriate discovery tools (`find_nearby_cold_storage`, `dispatch_hotshot_courier_relay`, `deploy_mobile_tech_intercept`, etc.).
+3. Reserve the optimal operational asset.
+4. Recalculate ETA against surgical deadline (`recalculate_reroute_eta`).
+5. Transmit emergency clinical notice (`notify_clinical_stakeholders`).
+6. File regulatory CAPA deviation notice (`generate_gxp_deviation_report`).
 
-After completing all tool executions, provide:
-1. A concise, authoritative Executive Debrief.
-2. A realistic Driver Radio Dispatch transmission.
-3. An HL7 Clinical Advisory notice.
+After completing all tool executions, provide an Executive Resolution Debrief.
 """
 
 def get_gemini_client() -> genai.Client:
@@ -93,34 +91,39 @@ def generate_with_fallback(
 
     raise RuntimeError(f"All candidate models failed. Last exception: {last_exception}")
 
-def run_cryoguard_mission(incident_payload: Dict[str, Any]) -> Dict[str, Any]:
+def run_cryoguard_mission(incident_payload: Dict[str, Any], is_replan: bool = False) -> Dict[str, Any]:
     client = get_gemini_client()
     tools_list = list(TOOL_MAP.values())
 
     event = incident_payload.get("incident_event", {})
+    customer = incident_payload.get("customer_data", {})
     sla_id = incident_payload.get("governing_sla_id", "SLA-COLD-2TO8")
     candidate_hubs = incident_payload.get("candidate_hubs", [])
-    curveball = incident_payload.get("curveball_condition", None)
+    curveball = incident_payload.get("curveball_condition", "NONE")
     
     prompt = f"""
-EMERGENCY TELEMETRY INCIDENT INGESTION:
+EMERGENCY INCIDENT ALERT:
 Incident ID: {event.get('event_id')}
 Shipment: {event.get('shipment_id')}
-Cargo: {event.get('cargo_manifest', {}).get('item')}
-Governing SLA Schedule: {sla_id}
-Active Highway: {event.get('location', {}).get('highway')} (Lat: {event.get('location', {}).get('latitude')}, Lng: {event.get('location', {}).get('longitude')})
-Sensor Telemetry:
-- Fault Code: {event.get('sensor_readings', {}).get('compressor_status')}
-- Cargo Temp: {event.get('sensor_readings', {}).get('cargo_temperature_celsius')}°C
-- Schedule SLA Deadline: {event.get('transit_schedule', {}).get('sla_deadline')}
+Customer Sponsor: {customer.get('customer_name')} (ID: {customer.get('customer_id')})
+Cargo Drug: {customer.get('drug_product')} (Batch: {customer.get('batch_lot')})
+Commercial Valuation: ${customer.get('valuation_usd', 470000):,} USD
+Governing Contract Agreement: {customer.get('contract_title')}
+SLA Schedule: {sla_id}
+Current Location: {event.get('location', {}).get('highway')} (Lat: {event.get('location', {}).get('latitude')}, Lng: {event.get('location', {}).get('longitude')})
 
-Operational Corridor Candidate Facilities:
+Sensor Readings:
+- Fault: {event.get('sensor_readings', {}).get('compressor_status')}
+- Cargo Temp: {event.get('sensor_readings', {}).get('cargo_temperature_celsius')}°C
+- SLA Deadline: {event.get('transit_schedule', {}).get('sla_deadline')}
+
+Candidate Corridor Facilities:
 {json.dumps(candidate_hubs, indent=2)}
 
-ACTIVE CORRIDOR ANOMALY / CURVEBALL:
-{curveball if curveball else "None (Standard anomaly mitigation protocol)"}
+ACTIVE CORRIDOR MODIFIER / CURVEBALL:
+{curveball}
 
-Execute autonomous reasoning loop, evaluate constraints, and deploy the optimal recovery strategy.
+Execute autonomous reasoning loop, audit the customer agreement, handle any active curveball, and deploy optimal recovery.
 """
 
     messages = [
@@ -154,7 +157,6 @@ Execute autonomous reasoning loop, evaluate constraints, and deploy the optimal 
         model_content = candidate.content
         messages.append(model_content)
 
-        # Capture any inner chain-of-thought text emitted before/alongside function calls
         turn_text_parts = [part.text for part in model_content.parts if part.text]
         if turn_text_parts:
             thought = " ".join(turn_text_parts).strip()
@@ -171,10 +173,17 @@ Execute autonomous reasoning loop, evaluate constraints, and deploy the optimal 
             fn_name = call.name
             fn_args = dict(call.args) if call.args else {}
             
-            # Inject corridor hubs and curveball into candidate lookup if applicable
-            if fn_name == "find_nearby_cold_storage":
+            if fn_name == "get_contract_clauses":
+                fn_args.setdefault("customer_id", customer.get("customer_id"))
+                fn_args.setdefault("sla_id", sla_id)
+            elif fn_name == "find_nearby_cold_storage":
                 fn_args.setdefault("candidate_hubs", candidate_hubs)
                 fn_args.setdefault("curveball_condition", curveball)
+            elif fn_name == "recalculate_reroute_eta":
+                fn_args.setdefault("curveball_condition", curveball)
+            elif fn_name == "generate_gxp_deviation_report":
+                fn_args.setdefault("customer_id", customer.get("customer_id"))
+                fn_args.setdefault("sla_id", sla_id)
 
             tool_fn = TOOL_MAP.get(fn_name)
             if tool_fn:

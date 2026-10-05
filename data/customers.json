@@ -1,0 +1,98 @@
+[
+  {
+    "customer_id": "CUST-NOV-01",
+    "customer_name": "Novartis Cell & Gene Therapies",
+    "drug_product": "Kymriah (tisagenlecleucel) Autologous CAR-T",
+    "batch_lot": "LOT-KYM-2026-904",
+    "valuation_usd": 475000,
+    "contract_title": "Novartis Global Cold-Chain Quality Agreement (Q-AGR-NOV-2026)",
+    "governing_sla_id": "SLA-CRYO-LN2",
+    "delay_liquidated_damages": "$50,000 surgical rescheduling fee + hospital standby charge",
+    "consignee_facility": "Mayo Clinic Rochester Cellular Therapy Laboratory",
+    "allowed_excursion_mins": 30
+  },
+  {
+    "customer_id": "CUST-VTX-02",
+    "customer_name": "Vertex Pharmaceuticals",
+    "drug_product": "Casgevy (exagamglogene autotemcel) CRISPR Cell Therapy",
+    "batch_lot": "LOT-CAS-8812-B",
+    "valuation_usd": 580000,
+    "contract_title": "Vertex Master Cell Therapy Transport Protocol (Q-AGR-VTX-88)",
+    "governing_sla_id": "SLA-CRYO-LN2",
+    "delay_liquidated_damages": "$75,000 operating theater cancellation penalty",
+    "consignee_facility": "Memorial Sloan Kettering Cancer Center",
+    "allowed_excursion_mins": 30
+  },
+  {
+    "customer_id": "CUST-MRNA-03",
+    "customer_name": "Moderna Oncology Therapeutics",
+    "drug_product": "Custom Personalized mRNA Neoantigen Vaccine Lot #ONC-77",
+    "batch_lot": "LOT-MRNA-NEO-077",
+    "valuation_usd": 390000,
+    "contract_title": "Moderna Deep-Frozen Distribution Standard (Q-AGR-MRNA-09)",
+    "governing_sla_id": "SLA-FROZEN-MKT",
+    "delay_liquidated_damages": "$40,000 regulatory re-filing and cohort postponement penalty",
+    "consignee_facility": "MD Anderson Cancer Center Cellular Suite",
+    "allowed_excursion_mins": 45
+  },
+  {
+    "customer_id": "CUST-GEN-04",
+    "customer_name": "Genentech / Roche Oncology",
+    "drug_product": "Polivy (polatuzumab vedotin) Antibody-Drug Conjugate",
+    "batch_lot": "LOT-GEN-ADC-4019",
+    "valuation_usd": 310000,
+    "contract_title": "Genentech Master Biologics Quality Agreement (Q-AGR-GEN-12)",
+    "governing_sla_id": "SLA-COLD-2TO8",
+    "delay_liquidated_damages": "$25,000 clinical site late-delivery surcharge",
+    "consignee_facility": "Stanford University Medical Center",
+    "allowed_excursion_mins": 120
+  },
+  {
+    "customer_id": "CUST-LLY-05",
+    "customer_name": "Eli Lilly Specialty Operations",
+    "drug_product": "Phase III Clinical Trial Active Biologic Compound",
+    "batch_lot": "LOT-LLY-TRI-9921",
+    "valuation_usd": 260000,
+    "contract_title": "Eli Lilly Critical Supply Chain Agreement (Q-AGR-LLY-04)",
+    "governing_sla_id": "SLA-COLD-2TO8",
+    "delay_liquidated_damages": "$30,000 protocol protocol violation damages",
+    "consignee_facility": "Cleveland Clinic Biorepository",
+    "allowed_excursion_mins": 120
+  },
+  {
+    "customer_id": "CUST-BMRN-06",
+    "customer_name": "BioMarin Pharmaceutical",
+    "drug_product": "Roctavian (valoctocogene roxaparvovec) AAV5 Gene Therapy",
+    "batch_lot": "LOT-BMR-AAV-3301",
+    "valuation_usd": 620000,
+    "contract_title": "BioMarin High-Titer AAV Quality Agreement (Q-AGR-BMR-19)",
+    "governing_sla_id": "SLA-MECHANICAL-GFORCE",
+    "delay_liquidated_damages": "$60,000 clinical rescheduling fee + G-force audit charge",
+    "consignee_facility": "Johns Hopkins Hospital Cellular Suite",
+    "allowed_excursion_mins": 120
+  },
+  {
+    "customer_id": "CUST-SPK-07",
+    "customer_name": "Spark Therapeutics",
+    "drug_product": "Luxturna (voretigene neparvovec) Retinal Gene Therapy",
+    "batch_lot": "LOT-SPK-LUX-0044",
+    "valuation_usd": 510000,
+    "contract_title": "Spark Tamper-Evident Chain-of-Custody Agreement (Q-AGR-SPK-33)",
+    "governing_sla_id": "SLA-CHAIN-CUSTODY",
+    "delay_liquidated_damages": "$50,000 regulatory investigation fee + mandatory quarantine",
+    "consignee_facility": "Children's Hospital of Philadelphia",
+    "allowed_excursion_mins": 60
+  },
+  {
+    "customer_id": "CUST-STJ-08",
+    "customer_name": "St. Jude Children's Research Logistics",
+    "drug_product": "Pediatric Allogeneic Bone Marrow Stem Cell Suspension",
+    "batch_lot": "LOT-STJ-BMT-102",
+    "valuation_usd": 340000,
+    "contract_title": "St. Jude Emergency Life-Critical Infusion SLA (Q-AGR-STJ-01)",
+    "governing_sla_id": "SLA-SURGICAL-JIT",
+    "delay_liquidated_damages": "$85,000 operating room hold + surgical team standby",
+    "consignee_facility": "Vanderbilt University Medical Center",
+    "allowed_excursion_mins": 90
+  }
+]
