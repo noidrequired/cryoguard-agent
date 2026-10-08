@@ -1,27 +1,14 @@
-
-def get_hub_display_color(hub_dict: dict) -> str:
-    """Returns color based on the primary service tier of the facility."""
-    caps = hub_dict.get("capabilities", [])
-    if "ULTRA_LOW_CRYOGENIC" in caps or "LIQUID_NITROGEN_RECHARGE" in caps:
-        return "#a855f7"  # Purple: Ultra-Low Cryogenic Vault
-    elif "COMPRESSOR_MECHANICAL_REPAIR" in caps:
-        return "#f97316"  # Orange: HVAC Mechanical Repair Bay
-    elif "REFRIGERATED_2TO8" in caps:
-        return "#10b981"  # Green: Standard 2°C to 8°C Chiller
-    elif "DRY_ICE_TOPPING" in caps:
-        return "#38bdf8"  # Cyan/Sky Blue: Dry Ice Relay Post
-    return "#64748b"      # Gray: Ambient/Controlled Room Temp
-
 import json
 import math
 import random
 import time
+from datetime import datetime, timedelta
 import streamlit as st
 import plotly.graph_objects as go
-from src.agent import run_cryoguard_mission
+from src.agent import run_cryoguard_mission, evaluate_facility_compatibility
 from src.routing import get_driving_route, resample_waypoints
 
-# Universal Mapbox / MapLibre Adapter
+# Map Engine Adapter
 if hasattr(go, "Scattermap"):
     MapTrace = go.Scattermap
     IS_SCATTERMAP = True
@@ -54,6 +41,18 @@ def apply_map_camera(fig, style_name, camera_bounds, height=480, uirevision=None
             zoom=camera_bounds["zoom"]
         )
     fig.update_layout(**layout_dict)
+
+def get_hub_display_color(hub_dict: dict) -> str:
+    caps = hub_dict.get("capabilities", [])
+    if "ULTRA_LOW_CRYOGENIC" in caps or "LIQUID_NITROGEN_RECHARGE" in caps:
+        return "#a855f7"  # Purple: Ultra-Low Cryo
+    elif "COMPRESSOR_MECHANICAL_REPAIR" in caps:
+        return "#f97316"  # Orange: HVAC Repair Bay
+    elif "REFRIGERATED_2TO8" in caps:
+        return "#10b981"  # Green: 2C to 8C Chiller
+    elif "DRY_ICE_TOPPING" in caps:
+        return "#38bdf8"  # Cyan: Dry Ice Relay
+    return "#64748b"      # Gray: Ambient
 
 SIM_STEP_DELAY = 0.5
 
@@ -103,7 +102,7 @@ def compute_map_bounds(waypoints):
         
     return dict(center=dict(lat=round(center_lat, 4), lon=round(center_lon, 4)), zoom=zoom)
 
-# Mission Control Styling
+# CSS Styling
 st.markdown("""
 <style>
     .stApp {
@@ -197,7 +196,7 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
     .kpi-num {
-        font-size: 1.45rem;
+        font-size: 1.35rem;
         font-weight: 800;
         margin: 2px 0;
     }
@@ -315,7 +314,7 @@ def load_all_databases():
 
 customers_pool, anomalies_pool, slas_db, routes_pool, base_telemetry = load_all_databases()
 
-# Session State Initialization
+# State Management
 if "has_run_started" not in st.session_state:
     st.session_state["has_run_started"] = False
 if "is_running" not in st.session_state:
@@ -324,6 +323,21 @@ if "mission_clock" not in st.session_state:
     st.session_state["mission_clock"] = 0
 if "sim_state" not in st.session_state:
     st.session_state["sim_state"] = "STANDBY"
+if "anomaly_count" not in st.session_state:
+    st.session_state["anomaly_count"] = 0
+if "mission_start_time" not in st.session_state:
+    st.session_state["mission_start_time"] = None
+if "current_sim_time" not in st.session_state:
+    st.session_state["current_sim_time"] = None
+if "sla_deadline_time" not in st.session_state:
+    st.session_state["sla_deadline_time"] = None
+if "current_eta_time" not in st.session_state:
+    st.session_state["current_eta_time"] = None
+if "total_corridor_miles" not in st.session_state:
+    st.session_state["total_corridor_miles"] = 0.0
+if "miles_traversed" not in st.session_state:
+    st.session_state["miles_traversed"] = 0.0
+
 if "cur_lat" not in st.session_state:
     st.session_state["cur_lat"] = 0.0
 if "cur_lon" not in st.session_state:
@@ -472,7 +486,22 @@ with st.container():
                 road_route = get_driving_route(o["lat"], o["lon"], dest["lat"], dest["lon"], corridor_id=c_id)
                 
                 highway_waypoints = road_route["waypoints"]
-                sampled_driving_pts = resample_waypoints(highway_waypoints, target_count=70)
+                total_miles = float(road_route.get("distance_miles", 180.0))
+                sampled_driving_pts = resample_waypoints(highway_waypoints, target_count=max(60, int(total_miles)))
+
+                now_dt = datetime.now()
+                nom_transit_seconds = total_miles / 1.0  # 1.0 mile/second
+                tight_sla_buffer_sec = 55.0  # Tight contractual buffer
+                sla_deadline = now_dt + timedelta(seconds=nom_transit_seconds + tight_sla_buffer_sec)
+                initial_eta = now_dt + timedelta(seconds=nom_transit_seconds)
+
+                st.session_state["mission_start_time"] = now_dt
+                st.session_state["current_sim_time"] = now_dt
+                st.session_state["sla_deadline_time"] = sla_deadline
+                st.session_state["current_eta_time"] = initial_eta
+                st.session_state["total_corridor_miles"] = total_miles
+                st.session_state["miles_traversed"] = 0.0
+                st.session_state["anomaly_count"] = 0
 
                 st.session_state["active_customer"] = chosen_cust
                 st.session_state["active_route"] = chosen_route
@@ -495,11 +524,13 @@ with st.container():
                 st.session_state["mission_result"] = None
                 st.session_state["passed_points"] = [{"sec": 0, "temp": 3.5, "lat": st.session_state["cur_lat"], "lon": st.session_state["cur_lon"]}]
                 st.session_state["has_run_started"] = True
+                
+                dep_str = now_dt.strftime("%H:%M:%S")
                 st.session_state["run_logs"] = [
-                    f"[T+00s] 🟢 Fleet telematics online. Unit #409 departed {chosen_route['origin']['name']}.",
-                    f"[T+00s] 🛣️️ Interstate Network: {road_route['distance_miles']} miles ({len(highway_waypoints)} road points) via {road_route['source']}.",
-                    f"[T+00s] 🏢 Sponsor: {chosen_cust['customer_name']} | Agreement: {chosen_cust['contract_title']}",
-                    f"[T+00s] 📦 Drug Asset: {chosen_cust['drug_product']} (Valuation: ${chosen_cust['valuation_usd']:,} USD)"
+                    f"[{dep_str}] 🟢 Unit #409 departed {chosen_route['origin']['name']}.",
+                    f"[{dep_str}] 🛣️ Corridor Distance: {total_miles:.1f} mi (Nominal Transit: {nom_transit_seconds:.0f}s @ 1.0 mi/s).",
+                    f"[{dep_str}] ⏱️ Contract SLA Deadline: {sla_deadline.strftime('%H:%M:%S')} (Tight Buffer: +55s max).",
+                    f"[{dep_str}] 🏢 Sponsor: {chosen_cust['customer_name']} | Asset: {chosen_cust['drug_product']} (${chosen_cust['valuation_usd']:,} USD)"
                 ]
                 st.session_state["is_running"] = True
                 st.rerun()
@@ -515,6 +546,7 @@ with st.container():
             st.session_state["has_run_started"] = False
             st.session_state["is_running"] = False
             st.session_state["mission_clock"] = 0
+            st.session_state["anomaly_count"] = 0
             st.session_state["sim_state"] = "STANDBY"
             st.session_state["active_customer"] = None
             st.session_state["active_route"] = None
@@ -527,25 +559,39 @@ with st.container():
             st.session_state["active_leg_pts"] = []
             st.session_state["passed_points"] = []
             st.session_state["run_logs"] = []
+            st.session_state["mission_start_time"] = None
+            st.session_state["current_sim_time"] = None
+            st.session_state["sla_deadline_time"] = None
+            st.session_state["current_eta_time"] = None
+            st.session_state["total_corridor_miles"] = 0.0
+            st.session_state["miles_traversed"] = 0.0
             st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Mission Clock Bar
+# Live Mission Clock Bar
 bar_c1, bar_c2 = st.columns([2, 1.2])
 with bar_c1:
     if st.session_state["has_run_started"]:
-        cur_sec = st.session_state["mission_clock"]
+        sim_time_str = st.session_state["current_sim_time"].strftime("%H:%M:%S") if st.session_state.get("current_sim_time") else "--:--:--"
+        dep_time_str = st.session_state["mission_start_time"].strftime("%H:%M:%S") if st.session_state.get("mission_start_time") else "--:--:--"
+        eta_str = st.session_state["current_eta_time"].strftime("%H:%M:%S") if st.session_state.get("current_eta_time") else "--:--:--"
         cust_badge = st.session_state['active_customer']['customer_name']
+        cur_mi = st.session_state.get("miles_traversed", 0.0)
+        tot_mi = st.session_state.get("total_corridor_miles", 0.0)
+        
         st.markdown(f"""
-        <div style="padding: 2px 0 6px 0;">
-            <span style="font-size: 1.35rem; font-weight: 800; color: #f8fafc;">⏱️ Mission Clock: T+{cur_sec:02d}s</span>
-            <span style="margin-left: 12px; font-size: 0.88rem; color: #38bdf8; font-family: ui-monospace, monospace; font-weight: 700;">
-                {st.session_state['cur_meter']:,}m | ({st.session_state['cur_lat']:.5f}, {st.session_state['cur_lon']:.5f})
-            </span>
-            <span style="margin-left: 12px; background: #1e293b; color: #94a3b8; font-size: 0.8rem; padding: 4px 10px; border-radius: 4px;">
+        <div style="padding: 2px 0 6px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div>
+                <span style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">🕒 Live Clock: {sim_time_str}</span>
+                <span style="margin-left: 10px; font-size: 0.84rem; color: #94a3b8;">(Dep: <b>{dep_time_str}</b> | ETA: <b>{eta_str}</b>)</span>
+            </div>
+            <div style="font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; color: #a7f3d0;">
+                🛣️ {cur_mi:.1f} / {tot_mi:.1f} mi (1.0 mi/s) | GPS ({st.session_state['cur_lat']:.4f}, {st.session_state['cur_lon']:.4f})
+            </div>
+            <div style="background: #1e293b; color: #94a3b8; font-size: 0.8rem; padding: 4px 10px; border-radius: 4px;">
                 Client: <b>{cust_badge}</b>
-            </span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -556,40 +602,36 @@ with bar_c2:
         if st.session_state["sim_state"] in ["EN_ROUTE_HUB", "SERVICING", "NOMINAL", "FINAL_LEG"]:
             if st.button("⚡ Inject Surprise Disruption!", type="primary", use_container_width=True):
                 st.session_state["active_curveball"] = "POWER_OUTAGE"
-                clock = st.session_state["mission_clock"]
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ SURPRISE DISRUPTION INJECTED: Primary substation transformer explosion!")
+                st.session_state["anomaly_count"] = st.session_state.get("anomaly_count", 0) + 1
+                cur_t = st.session_state["current_sim_time"].strftime("%H:%M:%S") if st.session_state.get("current_sim_time") else "T+NOW"
+                st.session_state["run_logs"].append(f"[{cur_t}] ⚠️ SURPRISE DISRUPTION: Target Facility Substation Trip! Emergency re-plan triggered.")
                 
-                # Trigger live agent re-plan
                 route_info = st.session_state["active_route"]
                 cust = st.session_state["active_customer"]
                 sla_key = st.session_state.get("active_anomaly", {}).get("sla_governed", "SLA-COLD-2TO8") if st.session_state["active_anomaly"] else "SLA-COLD-2TO8"
                 
-                active_payload = json.loads(json.dumps(base_telemetry))
-                active_payload["customer_data"] = cust
-                active_payload["governing_sla_id"] = sla_key
-                active_payload["candidate_hubs"] = route_info.get("candidate_hubs", [])
-                active_payload["curveball_condition"] = "POWER_OUTAGE"
-                active_payload["incident_event"]["location"]["latitude"] = st.session_state["cur_lat"]
-                active_payload["incident_event"]["location"]["longitude"] = st.session_state["cur_lon"]
-                active_payload["incident_event"]["sensor_readings"]["compressor_status"] = "SURPRISE_POWER_OUTAGE"
-                active_payload["incident_event"]["sensor_readings"]["cargo_temperature_celsius"] = st.session_state["cur_temp"]
-                
-                replan_res = run_cryoguard_mission(active_payload, is_replan=True)
-                st.session_state["mission_result"] = replan_res
-                
-                # Pick alternative available facility
                 cand_hubs = route_info.get("candidate_hubs", [])
                 alt_hubs = [h for h in cand_hubs if h["facility_id"] != (st.session_state["chosen_hub"]["facility_id"] if st.session_state["chosen_hub"] else "")]
-                new_hub = alt_hubs[0] if alt_hubs else cand_hubs[0]
+                
+                cust["current_temp"] = st.session_state["cur_temp"]
+                cust["excursion_ceiling"] = 8.0
+                decision = evaluate_facility_compatibility(
+                    cust, {"fault_code": "POWER_OUTAGE_TRIP"}, alt_hubs,
+                    st.session_state["cur_lat"], st.session_state["cur_lon"],
+                    route_info["origin"], route_info["destination"],
+                    current_sim_time=st.session_state.get("current_sim_time"),
+                    sla_deadline=st.session_state.get("sla_deadline_time")
+                )
+                new_hub = decision["best_hub"] if decision["best_hub"] else (alt_hubs[0] if alt_hubs else cand_hubs[0])
                 st.session_state["chosen_hub"] = new_hub
                 
                 detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], new_hub["lat"], new_hub["lon"])
                 st.session_state["detour_road_pts"] = detour_meta["waypoints"]
-                st.session_state["active_leg_pts"] = resample_waypoints(detour_meta["waypoints"], target_count=20)
+                st.session_state["active_leg_pts"] = resample_waypoints(detour_meta["waypoints"], target_count=max(15, int(detour_meta.get("distance_miles", 20))))
                 st.session_state["leg_idx"] = 0
                 st.session_state["service_countdown"] = 14
                 st.session_state["sim_state"] = "EN_ROUTE_HUB"
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] 🔄 Agent Re-route: Diverting to Secondary Cold Hub -> {new_hub['name']} ({detour_meta['distance_miles']} mi).")
+                st.session_state["run_logs"].append(f"[{cur_t}] 🔄 Agent Re-route: Diverting to Secondary Cold Hub -> {new_hub['name']} ({detour_meta['distance_miles']} mi).")
                 st.rerun()
 
 # Phase Bar
@@ -625,7 +667,7 @@ else:
 k1, k2, k3, k4 = st.columns(4)
 
 if not st.session_state["has_run_started"]:
-    for k, title, val in [(k1, "Cargo Sensor Temp", "-- °C"), (k2, "Excursion Runway", "-- Mins"), (k3, "Delivery Window", "--:-- AM"), (k4, "Financial Exposure", "$0")]:
+    for k, title, val in [(k1, "Cargo Sensor Temp", "-- °C"), (k2, "Excursion Runway", "-- Mins"), (k3, "Delivery ETA & SLA Target", "--:--:--"), (k4, "Financial Exposure", "$0")]:
         with k:
             st.markdown(f'<div class="kpi-card"><div class="kpi-title">{title}</div><div class="kpi-num" style="color: #64748b;">{val}</div><div style="font-size: 0.75rem; color: #64748b;">Standby</div></div>', unsafe_allow_html=True)
 else:
@@ -652,16 +694,41 @@ else:
         runway_val = f"{max(4, int((ceiling_temp - cur_temp) / 0.04))} Mins" if is_hot else "NOMINAL"
         st.markdown(f'<div class="kpi-card"><div class="kpi-title">Excursion Runway</div><div class="kpi-num {"bad" if is_hot else "good"}">{runway_val}</div><div style="font-size: 0.75rem; color: #94a3b8;">Ceiling: {ceiling_temp}°C</div></div>', unsafe_allow_html=True)
     with k3:
-        eta_str = "05:54 AM (On Time)" if not is_hot else "06:45 AM (Late)"
-        eta_col = "good" if not is_hot else "bad"
-        st.markdown(f'<div class="kpi-card"><div class="kpi-title">Delivery Window</div><div class="kpi-num {eta_col}">{eta_str}</div><div style="font-size: 0.75rem; color: #94a3b8;">SLA Hard-Stop: 06:00 AM CT</div></div>', unsafe_allow_html=True)
+        eta_dt = st.session_state.get("current_eta_time")
+        sla_dt = st.session_state.get("sla_deadline_time")
+        if eta_dt and sla_dt:
+            is_breached = eta_dt > sla_dt
+            diff_sec = abs((eta_dt - sla_dt).total_seconds())
+            diff_mins = int(diff_sec // 60)
+            diff_s = int(diff_sec % 60)
+            
+            eta_display = eta_dt.strftime("%H:%M:%S")
+            sla_display = sla_dt.strftime("%H:%M:%S")
+            
+            if is_breached:
+                eta_val = f"{eta_display} (BREACH)"
+                eta_col = "bad"
+                sub_label = f"⚠️ Exceeds SLA by +{diff_mins}m {diff_s}s (Cutoff: {sla_display})"
+            elif diff_sec < 15.0:
+                eta_val = f"{eta_display} (BORDERLINE)"
+                eta_col = "warn"
+                sub_label = f"⚠️ Tight buffer: only +{diff_s}s slack (Cutoff: {sla_display})"
+            else:
+                eta_val = f"{eta_display} (ON TIME)"
+                eta_col = "good"
+                sub_label = f"✅ Buffer: +{diff_mins}m {diff_s}s slack (Cutoff: {sla_display})"
+        else:
+            eta_val = "--:--:--"
+            eta_col = "good"
+            sub_label = "SLA Target Active"
+        st.markdown(f'<div class="kpi-card"><div class="kpi-title">Delivery ETA & SLA Target</div><div class="kpi-num {eta_col}">{eta_val}</div><div style="font-size: 0.75rem; color: #94a3b8;">{sub_label}</div></div>', unsafe_allow_html=True)
     with k4:
         if is_hot:
             expo_str = f"${sla_exposure_usd:,}"
             expo_col = "bad"
             expo_sub = f"Liability: {cust.get('customer_name')[:20]}"
         elif st.session_state["sim_state"] == "DELIVERED":
-            if st.session_state["is_partial_breach"]:
+            if st.session_state["is_partial_breach"] or (eta_dt and sla_dt and eta_dt > sla_dt):
                 partial_pen = 5000
                 saved_net = sla_exposure_usd - partial_pen
                 expo_str = f"${saved_net:,} SAVED"
@@ -678,7 +745,7 @@ else:
 
         st.markdown(f'<div class="kpi-card"><div class="kpi-title">Financial Protection</div><div class="kpi-num {expo_col}">{expo_str}</div><div style="font-size: 0.75rem; color: #94a3b8;">{expo_sub}</div></div>', unsafe_allow_html=True)
 
-# Compact AI Status Pill
+# Compact AI Status Banner
 if st.session_state["has_run_started"] and st.session_state["mission_result"]:
     res = st.session_state["mission_result"]
     st.markdown(f"""
@@ -695,9 +762,7 @@ if st.session_state["has_run_started"] and st.session_state["mission_result"]:
     </div>
     """, unsafe_allow_html=True)
 
-# =========================================================================
-# OPERATIONAL SECTION TABS (ZERO OUTSIDE RENDERS - DIRECT INNER DRAW)
-# =========================================================================
+# Tabs Container
 tab_unified, tab_deliberation, tab_agent, tab_contract, tab_threat, tab_gxp = st.tabs([
     "🖥️ Live Telematics & Log Stream",
     "🧠 AI Cognitive Deliberation Feed",
@@ -707,7 +772,7 @@ tab_unified, tab_deliberation, tab_agent, tab_contract, tab_threat, tab_gxp = st
     "📜 Certified GxP / FDA 21 CFR Part 11 Audit Log"
 ])
 
-# TAB 1: THE ONLY ACTIVE MAP
+# Tab 1: The Only Map
 with tab_unified:
     map_col, log_col = st.columns([1.25, 1.0])
 
@@ -775,12 +840,12 @@ with tab_unified:
                 name="Carrier"
             ))
 
-            fac_lats = [route_info["origin"]["lat"], route_info["destination"]["lat"]]
-            fac_lons = [route_info["origin"]["lon"], route_info["destination"]["lon"]]
-            fac_texts = [f"🏭 {route_info['origin']['name']}", f"🏥 {route_info['destination']['name']}"]
-            fac_colors = ['#94a3b8', '#38bdf8']
+            fac_lats = []
+            fac_lons = []
+            fac_texts = []
+            fac_colors = []
 
-            # 1. Plot Origin Hub (Colored by service capability)
+            # Origin
             orig_hub = route_info["origin"]
             orig_color = "#fbbf24" if (chosen_hub and chosen_hub.get("facility_id") == orig_hub.get("facility_id")) else get_hub_display_color(orig_hub)
             fac_lats.append(orig_hub["lat"])
@@ -788,7 +853,7 @@ with tab_unified:
             fac_texts.append(f"🏭 ORIGIN: {orig_hub['name'][:22]}")
             fac_colors.append(orig_color)
 
-            # 2. Plot Destination Hub (Colored by service capability)
+            # Destination
             dest_hub = route_info["destination"]
             dest_color = "#fbbf24" if (chosen_hub and chosen_hub.get("facility_id") == dest_hub.get("facility_id")) else get_hub_display_color(dest_hub)
             fac_lats.append(dest_hub["lat"])
@@ -796,7 +861,7 @@ with tab_unified:
             fac_texts.append(f"🏥 DESTINATION: {dest_hub['name'][:22]}")
             fac_colors.append(dest_color)
 
-            # 3. Plot All Candidate Intermediate Hubs (Both On-Highway & Off-Route)
+            # Intermediate and Off-Route Hubs
             for h in route_info.get("candidate_hubs", []):
                 is_selected = chosen_hub and h.get("facility_id") == chosen_hub.get("facility_id")
                 fac_lats.append(h["lat"])
@@ -821,10 +886,9 @@ with tab_unified:
             camera_bounds = compute_map_bounds(main_pts)
             apply_map_camera(fig_map, active_map_style, camera_bounds, height=480, uirevision="cryoguard_mission_view")
 
-        # Direct in-column render without unkeyed wrappers
         map_col.plotly_chart(fig_map, use_container_width=True, key="unique_app_telematics_map")
 
-        # Facility Capability Color Legend
+        # Color Legend
         st.markdown("""
         <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; padding: 8px 12px; background: #0f172a; border-radius: 6px; font-size: 0.76rem; border: 1px solid #1e293b;">
             <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #a855f7; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>🟣 Ultra-Low Cryo (LN2)</span>
@@ -836,11 +900,10 @@ with tab_unified:
         </div>
         """, unsafe_allow_html=True)
 
-
     with log_col:
         st.markdown("<h5 style='margin-bottom: 6px;'>📜 Real-Time Autonomous Operations Log Stream</h5>", unsafe_allow_html=True)
         if not st.session_state["has_run_started"]:
-            log_html = '<div class="log-box"><div class="log-line">[T+00s] ⚪ System in standby. Select customer parameters and click "Launch".</div></div>'
+            log_html = '<div class="log-box"><div class="log-line">[--:--:--] ⚪ System in standby. Select customer parameters and click "Launch".</div></div>'
         else:
             log_html = '<div class="log-box">'
             for entry in reversed(st.session_state["run_logs"]):
@@ -848,7 +911,7 @@ with tab_unified:
             log_html += '</div>'
         log_col.markdown(log_html, unsafe_allow_html=True)
 
-# TAB 2: COGNITIVE DELIBERATION
+# Tab 2: Cognitive Deliberation Feed
 with tab_deliberation:
     st.markdown("### 🧠 Gemini Live Cognitive Deliberation Feed")
     if not st.session_state["has_run_started"] or not st.session_state["mission_result"]:
@@ -891,7 +954,7 @@ with tab_deliberation:
                 </div>
                 """, unsafe_allow_html=True)
 
-# TAB 3: AGENT TOOL TRACE
+# Tab 3: Tool Execution Trace
 with tab_agent:
     st.markdown("### 🤖 Autonomous Agent Reasoning & Function Calling Engine")
     if not st.session_state["has_run_started"]:
@@ -917,39 +980,45 @@ with tab_agent:
             with st.expander(f"🔍 Inspect Full Return Payload ({step['tool_called']})"):
                 st.json(r)
 
-# TAB 4: QUALITY AGREEMENT & CONTRACT
+# Tab 4: Markdown Contract View
 with tab_contract:
     st.markdown("### 📑 Customer Contract & Governing Quality Agreement")
     if not st.session_state["has_run_started"]:
         st.info("System in standby. Sponsor Quality Agreement will render upon mission launch.")
     else:
         cust = st.session_state["active_customer"]
-        anom = st.session_state["active_anomaly"]
-        sla_key = anom.get("sla_governed", cust.get("governing_sla_id", "SLA-COLD-2TO8")) if anom else cust.get("governing_sla_id", "SLA-COLD-2TO8")
-        sla_val = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
+        cid = cust["customer_id"]
+        sla_key = cust.get("governing_sla_id", "SLA-COLD-2TO8")
+        contract_file = f"contracts/{cid}_{sla_key}.md"
+        
+        try:
+            with open(contract_file, "r", encoding="utf-8") as f:
+                contract_md = f.read()
+            st.markdown(contract_md)
+        except Exception:
+            sla_val = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
+            c_c1, c_c2 = st.columns(2)
+            with c_c1:
+                st.markdown(f"""
+                #### 🏢 Commercial Sponsor Profile
+                - **Client Organization:** `{cust['customer_name']}` (ID: `{cust['customer_id']}`)
+                - **Therapeutic Asset:** `{cust['drug_product']}`
+                - **Batch Lot Number:** `{cust['batch_lot']}`
+                - **Commercial Valuation:** `${cust['valuation_usd']:,} USD`
+                - **Consignee Medical Facility:** `{cust['consignee_facility']}`
+                """)
+            with c_c2:
+                st.markdown(f"""
+                #### 📜 Governing Legal Quality Agreement
+                - **Agreement Title:** `{cust['contract_title']}`
+                - **SLA Schedule Tier:** `{sla_val['name']}` (`{sla_key}`)
+                - **Qualified Thermal Band:** `{sla_val['thermal_band']}`
+                - **Regulatory Excursion Ceiling:** `{sla_val['excursion_ceiling']}°C`
+                - **Max Allowed Excursion Window:** `{cust.get('allowed_excursion_mins', 60)} minutes`
+                - **Liquidated Delay Penalty:** `{cust['delay_liquidated_damages']}`
+                """)
 
-        c_c1, c_c2 = st.columns(2)
-        with c_c1:
-            st.markdown(f"""
-            #### 🏢 Commercial Sponsor Profile
-            - **Client Organization:** `{cust['customer_name']}` (ID: `{cust['customer_id']}`)
-            - **Therapeutic Asset:** `{cust['drug_product']}`
-            - **Batch Lot Number:** `{cust['batch_lot']}`
-            - **Commercial Valuation:** `${cust['valuation_usd']:,} USD`
-            - **Consignee Medical Facility:** `{cust['consignee_facility']}`
-            """)
-        with c_c2:
-            st.markdown(f"""
-            #### 📜 Governing Legal Quality Agreement
-            - **Agreement Title:** `{cust['contract_title']}`
-            - **SLA Schedule Tier:** `{sla_val['name']}` (`{sla_key}`)
-            - **Qualified Thermal Band:** `{sla_val['thermal_band']}`
-            - **Regulatory Excursion Ceiling:** `{sla_val['excursion_ceiling']}°C`
-            - **Max Allowed Excursion Window:** `{cust.get('allowed_excursion_mins', 60)} minutes`
-            - **Liquidated Delay Penalty:** `{cust['delay_liquidated_damages']}`
-            """)
-
-# TAB 5: THREAT PHYSICS & SENSOR GRAPH
+# Tab 5: Threat Physics
 with tab_threat:
     st.markdown("### 🚨 Threat Ingestion & Excursion Physics")
     if not st.session_state["has_run_started"]:
@@ -982,7 +1051,7 @@ with tab_threat:
             fig_t.update_layout(title="Dynamic Sensor Trajectory (°C vs Time)", xaxis_title="Seconds Elapsed", yaxis_title="Temp (°C)", template="plotly_dark", height=260, margin=dict(l=20, r=20, t=35, b=20))
             st.plotly_chart(fig_t, use_container_width=True)
 
-# TAB 6: GXP DEVIATION NOTICE & CAPA
+# Tab 6: GxP Audit
 with tab_gxp:
     st.markdown("### 📜 Certified GxP / FDA 21 CFR Part 11 Regulatory Audit Log")
     if not st.session_state["has_run_started"] or not st.session_state["mission_result"]:
@@ -1027,12 +1096,20 @@ with tab_gxp:
                 mime="application/json"
             )
 
-# Continuous Vehicle Advancement Engine
+# Simulation Engine Loop (1 mi/s constant speed)
 if st.session_state.get("is_running", False) and st.session_state.get("has_run_started", False):
     time.sleep(SIM_STEP_DELAY)
     
     st.session_state["mission_clock"] += 1
     clock = st.session_state["mission_clock"]
+    
+    if st.session_state.get("current_sim_time"):
+        st.session_state["current_sim_time"] += timedelta(seconds=1)
+    else:
+        st.session_state["current_sim_time"] = datetime.now()
+        
+    cur_time_str = st.session_state["current_sim_time"].strftime("%H:%M:%S")
+
     s_state = st.session_state["sim_state"]
     route_info = st.session_state["active_route"]
     cust = st.session_state["active_customer"]
@@ -1041,22 +1118,31 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
     leg_pts = st.session_state["active_leg_pts"]
     pt_idx = st.session_state["leg_idx"]
     
+    # Speed is exactly 1.0 mile per tick
+    st.session_state["miles_traversed"] = round(st.session_state.get("miles_traversed", 0.0) + 1.0, 1)
+    
+    # Recalculate dynamic ETA based on remaining road distance + pending dock hold
+    rem_miles = max(0.0, st.session_state.get("total_corridor_miles", 180.0) - st.session_state["miles_traversed"])
+    servicing_hold = st.session_state.get("service_countdown", 0) if s_state in ["EN_ROUTE_HUB", "SERVICING"] else 0
+    st.session_state["current_eta_time"] = st.session_state["current_sim_time"] + timedelta(seconds=rem_miles + servicing_hold)
+
     if pt_idx < len(leg_pts) - 1:
         st.session_state["leg_idx"] += 1
         next_pt = leg_pts[st.session_state["leg_idx"]]
         st.session_state["cur_lat"] = next_pt["lat"]
         st.session_state["cur_lon"] = next_pt["lon"]
-        st.session_state["cur_meter"] += 180
+        st.session_state["cur_meter"] += 1609
 
     if s_state == "NOMINAL":
         st.session_state["cur_temp"] = round(3.5 + random.uniform(-0.03, 0.03), 2)
         st.session_state["run_logs"].append(
-            f"[T+{clock:02d}s] 📍 GPS ({st.session_state['cur_lat']:.5f}, {st.session_state['cur_lon']:.5f}) | Temp: {st.session_state['cur_temp']}°C | Odometer: {st.session_state['cur_meter']:,}m | INTERSTATE_HIGHWAY"
+            f"[{cur_time_str}] 📍 GPS ({st.session_state['cur_lat']:.4f}, {st.session_state['cur_lon']:.4f}) | Temp: {st.session_state['cur_temp']}°C | {st.session_state['miles_traversed']:.1f} mi"
         )
         
         if clock >= f_sec:
             st.session_state["sim_state"] = "FAULT_DETECTED"
             st.session_state["cur_temp"] = 6.4
+            st.session_state["anomaly_count"] = st.session_state.get("anomaly_count", 0) + 1
             
             if st.session_state["selected_anomaly_id"] == "AUTO":
                 active_anom = random.choice(anomalies_pool)
@@ -1071,64 +1157,72 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             st.session_state["active_curveball"] = chosen_cb
 
             sla_key = active_anom.get("sla_governed", cust.get("governing_sla_id", "SLA-COLD-2TO8"))
-            matched_sla = slas_db.get(sla_key, slas_db["SLA-COLD-2TO8"])
             risk_usd = cust.get("valuation_usd", 470000)
             
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🚨 SENSOR FAULT DETECTED: {active_anom['name']} ({active_anom['fault_code']})!"
+                f"[{cur_time_str}] 🚨 SENSOR FAULT DETECTED: {active_anom['name']} ({active_anom['fault_code']})!"
             )
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 📑 Contract Audit: Triggered {cust['contract_title']} (Valuation: ${risk_usd:,} USD)"
+                f"[{cur_time_str}] 📑 Contract Audit: Triggered {cust['contract_title']} (Valuation: ${risk_usd:,} USD)"
             )
-            if chosen_cb != "NONE":
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ Active Corridor Modifier: {chosen_cb}")
             
+            # Kinematic Multi-Criteria Triage Evaluation
+            c_lat, c_lon = st.session_state["cur_lat"], st.session_state["cur_lon"]
+            cand_hubs = route_info.get("candidate_hubs", [])
+            origin_pt = route_info["origin"]
+            dest_pt = route_info["destination"]
+            
+            cust["current_temp"] = 6.4
+            cust["excursion_ceiling"] = 8.0
+            decision = evaluate_facility_compatibility(
+                cust, active_anom, cand_hubs, c_lat, c_lon, origin_pt, dest_pt,
+                current_sim_time=st.session_state.get("current_sim_time"),
+                sla_deadline=st.session_state.get("sla_deadline_time")
+            )
+            
+            strategy = decision["strategy"]
+            if strategy == "DIVERT_SPECIALTY_HUB" and decision["best_hub"]:
+                chosen_hub = decision["best_hub"]
+                st.session_state["chosen_hub"] = chosen_hub
+                st.session_state["run_logs"].append(
+                    f"[{cur_time_str}] 🏢 Triage Decision: Selected {chosen_hub['name']} based on capability, runway, and SLA margins."
+                )
+            elif strategy == "ABORT_RETURN_TO_ORIGIN":
+                chosen_hub = dict(origin_pt)
+                st.session_state["chosen_hub"] = chosen_hub
+                st.session_state["run_logs"].append(
+                    f"[{cur_time_str}] ⚠️ STRATEGIC ABORT: No viable forward hub supports required cryo service. Returning to origin!"
+                )
+            else:
+                chosen_hub = dict(dest_pt)
+                st.session_state["chosen_hub"] = chosen_hub
+                st.session_state["is_partial_breach"] = True
+                st.session_state["run_logs"].append(
+                    f"[{cur_time_str}] ⚠️ EXPEDITE PUSH: Continuing to destination under SLA delay penalty. Inbound emergency bay alerted."
+                )
+
+            # Invoke agent function calling mission trace
             active_payload = json.loads(json.dumps(base_telemetry))
             active_payload["customer_data"] = cust
             active_payload["governing_sla_id"] = sla_key
-            active_payload["candidate_hubs"] = route_info.get("candidate_hubs", [])
+            active_payload["candidate_hubs"] = cand_hubs
             active_payload["curveball_condition"] = chosen_cb
-            active_payload["incident_event"]["location"]["latitude"] = st.session_state["cur_lat"]
-            active_payload["incident_event"]["location"]["longitude"] = st.session_state["cur_lon"]
+            active_payload["incident_event"]["location"]["latitude"] = c_lat
+            active_payload["incident_event"]["location"]["longitude"] = c_lon
             active_payload["incident_event"]["sensor_readings"]["compressor_status"] = active_anom["fault_code"]
             active_payload["incident_event"]["sensor_readings"]["cargo_temperature_celsius"] = 6.4
             
             res = run_cryoguard_mission(active_payload, is_replan=False)
             st.session_state["mission_result"] = res
             
-            from src.agent import evaluate_facility_compatibility
-            cand_hubs = route_info.get("candidate_hubs", [])
-            origin_pt = route_info["origin"]
-            dest_pt = route_info["destination"]
+            # Fetch detour route and set active driving leg
+            detour_meta = get_driving_route(c_lat, c_lon, chosen_hub["lat"], chosen_hub["lon"])
+            detour_waypoints = detour_meta["waypoints"]
             
-            c_lat, c_lon = st.session_state["cur_lat"], st.session_state["cur_lon"]
-            decision = evaluate_facility_compatibility(cust, active_anom, cand_hubs, c_lat, c_lon, origin_pt, dest_pt)
-            
-            strategy = decision["strategy"]
-            if strategy == "DIVERT_SPECIALTY_HUB" and decision["best_hub"]:
-                chosen_hub = decision["best_hub"]
-                target_dest = (chosen_hub["lat"], chosen_hub["lon"])
-                st.session_state["chosen_hub"] = chosen_hub
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] 🏢 Facility Decision: Selected specialized facility {chosen_hub['name']} (Capabilities: {', '.join(chosen_hub.get('capabilities', []))}).")
-            elif strategy == "ABORT_RETURN_TO_ORIGIN":
-                chosen_hub = {"name": f"RETURN TO ORIGIN: {origin_pt['name']}", "lat": origin_pt["lat"], "lon": origin_pt["lon"], "facility_id": "ORIGIN_RETURN"}
-                st.session_state["chosen_hub"] = chosen_hub
-                target_dest = (origin_pt["lat"], origin_pt["lon"])
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ STRATEGIC ABORT: No intermediate facility supports required cryo service. Returning to origin!")
-            else:
-                chosen_hub = {"name": f"PUSH TO CONSIGNEE: {dest_pt['name']}", "lat": dest_pt["lat"], "lon": dest_pt["lon"], "facility_id": "DEST_PUSH"}
-                st.session_state["chosen_hub"] = chosen_hub
-                target_dest = (dest_pt["lat"], dest_pt["lon"])
-                st.session_state["is_partial_breach"] = True
-                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ EXPEDITE PUSH: Continuing to Consignee under SLA Delay Penalty. Inbound emergency dock notified.")
-                
-            st.session_state["chosen_hub"] = chosen_hub
-            
-            detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], chosen_hub["lat"], chosen_hub["lon"])
-            detour_road_waypoints = detour_meta["waypoints"]
-            
-            st.session_state["detour_road_pts"] = detour_road_waypoints
-            st.session_state["active_leg_pts"] = resample_waypoints(detour_road_waypoints, target_count=20)
+            st.session_state["detour_road_pts"] = detour_waypoints
+            # 1.0 mi/s resampling
+            detour_mi = max(12, int(detour_meta.get("distance_miles", 20)))
+            st.session_state["active_leg_pts"] = resample_waypoints(detour_waypoints, target_count=detour_mi)
             st.session_state["leg_idx"] = 0
             st.session_state["service_countdown"] = 14
             st.session_state["sim_state"] = "EN_ROUTE_HUB"
@@ -1136,22 +1230,22 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             for s in res["trace"]:
                 st_str = format_tool_status(s.get("result"))
                 st.session_state["run_logs"].append(
-                    f"[T+{clock:02d}s] 🤖 Agent: Executed `{s['tool_called']}` ➔ {st_str}"
+                    f"[{cur_time_str}] 🤖 Agent: Executed `{s['tool_called']}` ➔ {st_str}"
                 )
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🚀 Detour Route Calculated: Taking physical exit ramp to {chosen_hub['name']} ({detour_meta['distance_miles']} mi)."
+                f"[{cur_time_str}] 🚀 Detour Route Calculated: Taking arterial branch to {chosen_hub['name']} ({detour_meta['distance_miles']} mi)."
             )
 
     elif s_state == "EN_ROUTE_HUB":
-        st.session_state["cur_temp"] = round(min(7.35, st.session_state["cur_temp"] + 0.06), 2)
+        st.session_state["cur_temp"] = round(min(7.45, st.session_state["cur_temp"] + 0.06), 2)
         st.session_state["run_logs"].append(
-            f"[T+{clock:02d}s] 🛣️ Detour Transit: Taking off-ramp toward {st.session_state['chosen_hub']['name']}. Temp: {st.session_state['cur_temp']}°C."
+            f"[{cur_time_str}] 🛣️ Detour Transit: Branching toward {st.session_state['chosen_hub']['name']}. Temp: {st.session_state['cur_temp']}°C."
         )
         
         if pt_idx >= len(leg_pts) - 1:
             st.session_state["sim_state"] = "SERVICING"
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🏢 Bay Arrival: Docked at {st.session_state['chosen_hub']['name']} Door #04. Servicing initiated."
+                f"[{cur_time_str}] 🏢 Bay Arrival: Docked at {st.session_state['chosen_hub']['name']} Door #04. Servicing initiated."
             )
 
     elif s_state == "SERVICING":
@@ -1159,7 +1253,7 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
         st.session_state["cur_temp"] = round(max(3.6, st.session_state["cur_temp"] - 0.28), 2)
         
         st.session_state["run_logs"].append(
-            f"[T+{clock:02d}s] ❄️ Servicing Active: Cryo charging in progress. Temp: {st.session_state['cur_temp']}°C. (Hold: {st.session_state['service_countdown']}s)"
+            f"[{cur_time_str}] ❄️ Servicing Active: Cryo charging in progress. Temp: {st.session_state['cur_temp']}°C. (Hold: {st.session_state['service_countdown']}s)"
         )
         
         if st.session_state["service_countdown"] <= 0:
@@ -1169,22 +1263,23 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             hub = st.session_state["chosen_hub"]
             final_meta = get_driving_route(hub["lat"], hub["lon"], dest["lat"], dest["lon"], corridor_id=route_info.get("route_id"))
             
-            # Start directly from hub coordinates without clearing visited trail
             st.session_state["cur_lat"] = hub["lat"]
             st.session_state["cur_lon"] = hub["lon"]
             st.session_state["detour_road_pts"] = []
             st.session_state["main_highway_pts"] = final_meta["waypoints"]
-            st.session_state["active_leg_pts"] = resample_waypoints(final_meta["waypoints"], target_count=24)
+            
+            rem_drive_miles = max(15, int(final_meta.get("distance_miles", 50)))
+            st.session_state["active_leg_pts"] = resample_waypoints(final_meta["waypoints"], target_count=rem_drive_miles)
             st.session_state["leg_idx"] = 0
             
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] ✅ Servicing Complete: Thermal envelope restored (3.6°C). Re-entering interstate to {cust['consignee_facility']}."
+                f"[{cur_time_str}] ✅ Servicing Complete: Thermal envelope restored (3.6°C). Re-entering interstate to {cust['consignee_facility']} ({rem_drive_miles} mi @ 1.0 mi/s)."
             )
 
     elif s_state == "FINAL_LEG":
         st.session_state["cur_temp"] = round(3.6 + random.uniform(-0.02, 0.02), 2)
         st.session_state["run_logs"].append(
-            f"[T+{clock:02d}s] 🛣️ Final Mile Approach: {st.session_state['cur_meter']:,}m traversed. Stabilized at {st.session_state['cur_temp']}°C."
+            f"[{cur_time_str}] 🛣️ Final Mile Approach: {st.session_state['miles_traversed']:.1f} mi traversed. Stabilized at {st.session_state['cur_temp']}°C."
         )
         
         if pt_idx >= len(leg_pts) - 1:
@@ -1193,7 +1288,7 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             saved_total = cust.get("valuation_usd", 470000)
             
             st.session_state["run_logs"].append(
-                f"[T+{clock:02d}s] 🏥 Consignee Delivery Complete: Delivered at {cust['consignee_facility']}. Zero batch spoilage! Preserved ${saved_total:,} USD under {cust['contract_title']}."
+                f"[{cur_time_str}] 🏥 Delivery Complete: Reached {cust['consignee_facility']}. Zero batch spoilage! Preserved ${saved_total:,} USD under {cust['contract_title']}."
             )
 
     st.session_state["passed_points"].append({
