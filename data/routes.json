@@ -1,225 +1,503 @@
 [
   {
-    "route_id": "CORR-SSF-STF",
-    "corridor_name": "Bayshore Biotech Corridor (US-101 S: South San Francisco \u2794 Stanford Medical)",
-    "origin": {
-      "name": "Genentech Logistics Campus, South San Francisco",
-      "lat": 37.6547,
-      "lon": -122.4077
-    },
-    "destination": {
-      "name": "Stanford Medicine Cancer Institute, Palo Alto",
-      "lat": 37.4346,
-      "lon": -122.1751
-    },
-    "candidate_hubs": [
-      {
-        "facility_id": "FAC-SFO-01",
-        "name": "SFO Airfreight Cold-Dock Alpha",
-        "type": "Airport Refrigerated Cargo Bay",
-        "lat": 37.6189,
-        "lon": -122.375,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 420,
-        "liquid_nitrogen_liters": 950
-      },
-      {
-        "facility_id": "FAC-SMT-02",
-        "name": "San Mateo GxP Cryo Distribution Center",
-        "type": "Mid-Peninsula Clinical Depot",
-        "lat": 37.563,
-        "lon": -122.3255,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 650,
-        "liquid_nitrogen_liters": 1400
-      },
-      {
-        "facility_id": "FAC-RWC-03",
-        "name": "Redwood City Life Sciences Transit Hub",
-        "type": "Bio-Logistics Rapid Recharge Dock",
-        "lat": 37.4852,
-        "lon": -122.2364,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 800,
-        "liquid_nitrogen_liters": 1800
-      },
-      {
-        "facility_id": "FAC-PAL-04",
-        "name": "Silicon Valley Biorepository Depots",
-        "type": "Clinical Terminal Cold Storage",
-        "lat": 37.4419,
-        "lon": -122.143,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 350,
-        "liquid_nitrogen_liters": 850
-      }
-    ]
-  },
-  {
     "route_id": "CORR-CHI-RCH",
-    "corridor_name": "I-90 Midwest Medical Corridor (Chicago, IL \u2794 Rochester, MN)",
+    "corridor_name": "Midwest Bio-Arterial (I-90 / I-94: Chicago, IL \u2794 Madison \u2794 Rochester, MN - 380 mi)",
     "origin": {
-      "name": "O'Hare International Air Cargo Terminal, Chicago",
+      "facility_id": "HUB-ORD-ORIGIN",
+      "name": "O'Hare International Cargo Mega-Depot (Chicago)",
       "lat": 41.9742,
-      "lon": -87.9073
+      "lon": -87.9073,
+      "capabilities": [
+        "REFRIGERATED_2TO8",
+        "DRY_ICE_TOPPING",
+        "COMPRESSOR_MECHANICAL_REPAIR"
+      ],
+      "certifications": [
+        "FDA_21CFR211",
+        "CGMP"
+      ],
+      "dock_wait_mins": 10,
+      "status": "AVAILABLE"
     },
     "destination": {
-      "name": "Mayo Clinic Bio-Therapeutics Pavilion, Rochester",
+      "facility_id": "HUB-MAYO-DEST",
+      "name": "Mayo Clinic Bio-Therapeutics Pavilion (Rochester)",
       "lat": 44.0225,
-      "lon": -92.4666
+      "lon": -92.4666,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "LIQUID_NITROGEN_RECHARGE",
+        "REFRIGERATED_2TO8"
+      ],
+      "certifications": [
+        "HOSPITAL_CRITICAL_CARE",
+        "FDA_21CFR211"
+      ],
+      "dock_wait_mins": 0,
+      "status": "AVAILABLE"
     },
     "candidate_hubs": [
       {
-        "facility_id": "FAC-RFD-10",
-        "name": "Rockford Interstate Cold Hub (Mile 65)",
-        "type": "Express Highway Cold-Dock",
+        "facility_id": "FAC-RFD-01",
+        "name": "Rockford Interstate Express Bay (Mile 65)",
+        "capabilities": [
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "DOT_STANDARD"
+        ],
         "lat": 42.2711,
         "lon": -89.094,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 1200,
-        "liquid_nitrogen_liters": 2400
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-MSN-11",
-        "name": "Madison Biotech Distribution Center (Mile 140)",
-        "type": "State Bio-Logistics Terminal",
+        "facility_id": "FAC-MSN-02",
+        "name": "Madison Biotech Cryo Vault (Mile 140)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE"
+        ],
+        "certifications": [
+          "FDA_21CFR211",
+          "CGMP"
+        ],
         "lat": 43.0731,
         "lon": -89.4012,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 890,
-        "liquid_nitrogen_liters": 3100
+        "dock_wait_mins": 10,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-LCR-12",
+        "facility_id": "FAC-MIL-OFFROUTE-03",
+        "name": "Milwaukee Lakefront HVAC Depot (Off-Route 55 mi East)",
+        "capabilities": [
+          "COMPRESSOR_MECHANICAL_REPAIR",
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
+        "lat": 43.0389,
+        "lon": -87.9065,
+        "dock_wait_mins": 25,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-DBQ-OFFROUTE-04",
+        "name": "Dubuque River Tri-State Dry Ice (Off-Route 40 mi South)",
+        "capabilities": [
+          "DRY_ICE_TOPPING"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
+        "lat": 42.5006,
+        "lon": -90.6646,
+        "dock_wait_mins": 5,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-LCR-05",
         "name": "La Crosse Mississippi Crossing Dock (Mile 245)",
-        "type": "Regional GxP Recharge Facility",
+        "capabilities": [
+          "REFRIGERATED_2TO8",
+          "DRY_ICE_TOPPING"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
         "lat": 43.8014,
         "lon": -91.2396,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 450,
-        "liquid_nitrogen_liters": 1200
+        "dock_wait_mins": 20,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-RCH-13",
-        "name": "Rochester Metro Receiving Cold Hub (Mile 320)",
-        "type": "Consignee Staging Dock",
-        "lat": 43.9982,
-        "lon": -92.3515,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 600,
-        "liquid_nitrogen_liters": 1500
+        "facility_id": "FAC-EAU-OFFROUTE-06",
+        "name": "Eau Claire Northwoods Cryo Depository (Off-Route 60 mi North)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
+        "lat": 44.8113,
+        "lon": -91.4985,
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
       }
     ]
   },
   {
     "route_id": "CORR-BOS-NYC",
-    "corridor_name": "Northeast Life Sciences Arterial (I-90/I-84: Boston, MA \u2794 Manhattan, NY)",
+    "corridor_name": "Northeast Life Sciences Arterial (I-90 / I-84: Boston, MA \u2794 Hartford \u2794 New York City - 230 mi)",
     "origin": {
-      "name": "Kendall Square Bio-Cluster, Cambridge/Boston",
+      "facility_id": "HUB-BOS-ORIGIN",
+      "name": "Kendall Square Bio-Cluster Complex (Boston/Cambridge)",
       "lat": 42.3601,
-      "lon": -71.0942
+      "lon": -71.0942,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "LIQUID_NITROGEN_RECHARGE",
+        "REFRIGERATED_2TO8"
+      ],
+      "certifications": [
+        "FDA_21CFR211",
+        "CGMP"
+      ],
+      "dock_wait_mins": 10,
+      "status": "AVAILABLE"
     },
     "destination": {
-      "name": "Memorial Sloan Kettering, New York City",
+      "facility_id": "HUB-MSK-DEST",
+      "name": "Memorial Sloan Kettering Inbound Cryo Dock (NYC)",
       "lat": 40.7641,
-      "lon": -73.9568
+      "lon": -73.9568,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "REFRIGERATED_2TO8",
+        "DRY_ICE_TOPPING"
+      ],
+      "certifications": [
+        "HOSPITAL_CRITICAL_CARE"
+      ],
+      "dock_wait_mins": 0,
+      "status": "AVAILABLE"
     },
     "candidate_hubs": [
       {
-        "facility_id": "FAC-WOR-20",
-        "name": "Worcester Biotech Cross-Dock (Mile 42)",
-        "type": "High-Volume Dry Ice Depot",
+        "facility_id": "FAC-WOR-01",
+        "name": "Worcester Ambient Freight Staging (Mile 42)",
+        "capabilities": [
+          "CONTROLLED_ROOM_TEMP"
+        ],
+        "certifications": [
+          "STANDARD_CARRIER"
+        ],
         "lat": 42.2626,
         "lon": -71.8023,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 1100,
-        "liquid_nitrogen_liters": 2200
+        "dock_wait_mins": 30,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-HFD-21",
-        "name": "Hartford Capital Cold-Chain Terminal (Mile 102)",
-        "type": "Regional Cryogenic Bay",
+        "facility_id": "FAC-PVD-OFFROUTE-02",
+        "name": "Providence Coastal HVAC Fleet Bay (Off-Route 38 mi South)",
+        "capabilities": [
+          "COMPRESSOR_MECHANICAL_REPAIR",
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
+        "lat": 41.824,
+        "lon": -71.4128,
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-HFD-03",
+        "name": "Hartford Capital Clinical Cryo-Center (Mile 102)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE",
+          "COMPRESSOR_MECHANICAL_REPAIR"
+        ],
+        "certifications": [
+          "FDA_21CFR211",
+          "CGMP"
+        ],
         "lat": 41.7658,
         "lon": -72.6734,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 750,
-        "liquid_nitrogen_liters": 1900
+        "dock_wait_mins": 12,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-DAN-22",
-        "name": "Danbury Interstate Cold Logistics (Mile 155)",
-        "type": "Express Recharge Dock",
+        "facility_id": "FAC-NHV-OFFROUTE-04",
+        "name": "New Haven Coastal Bio-Depot (Off-Route 28 mi South)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
+        "lat": 41.3083,
+        "lon": -72.9279,
+        "dock_wait_mins": 10,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-DAN-05",
+        "name": "Danbury Express Cold Relay Post (Mile 155)",
+        "capabilities": [
+          "REFRIGERATED_2TO8",
+          "DRY_ICE_TOPPING"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
         "lat": 41.3948,
         "lon": -73.454,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 500,
-        "liquid_nitrogen_liters": 1400
+        "dock_wait_mins": 20,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-WCH-23",
-        "name": "Westchester Life Sciences Depot (Mile 190)",
-        "type": "Metro Perimeter Cold Facility",
+        "facility_id": "FAC-WCH-06",
+        "name": "Westchester Regional HVAC Intercept Hub (Mile 190)",
+        "capabilities": [
+          "COMPRESSOR_MECHANICAL_REPAIR",
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
         "lat": 41.034,
         "lon": -73.7629,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 950,
-        "liquid_nitrogen_liters": 2600
+        "dock_wait_mins": 5,
+        "status": "AVAILABLE"
+      }
+    ]
+  },
+  {
+    "route_id": "CORR-IND-CLE",
+    "corridor_name": "Midwest Interstate Corridor (I-70 / I-71: Indianapolis \u2794 Columbus \u2794 Cleveland - 315 mi)",
+    "origin": {
+      "facility_id": "HUB-IND-ORIGIN",
+      "name": "Eli Lilly Logistics Central Park (Indianapolis)",
+      "lat": 39.7684,
+      "lon": -86.1581,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "LIQUID_NITROGEN_RECHARGE",
+        "REFRIGERATED_2TO8"
+      ],
+      "certifications": [
+        "FDA_21CFR211",
+        "CGMP"
+      ],
+      "dock_wait_mins": 10,
+      "status": "AVAILABLE"
+    },
+    "destination": {
+      "facility_id": "HUB-CLE-DEST",
+      "name": "Cleveland Clinic Cellular Therapy Biorepository",
+      "lat": 41.5034,
+      "lon": -81.6214,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "REFRIGERATED_2TO8",
+        "DRY_ICE_TOPPING"
+      ],
+      "certifications": [
+        "HOSPITAL_CRITICAL_CARE"
+      ],
+      "dock_wait_mins": 0,
+      "status": "AVAILABLE"
+    },
+    "candidate_hubs": [
+      {
+        "facility_id": "FAC-DAY-01",
+        "name": "Dayton Miami Valley Refrigeration Dock (Mile 72)",
+        "capabilities": [
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "DOT_STANDARD"
+        ],
+        "lat": 39.7589,
+        "lon": -84.1916,
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-CIN-OFFROUTE-02",
+        "name": "Cincinnati Ohio River Mechanical Depot (Off-Route 52 mi South)",
+        "capabilities": [
+          "COMPRESSOR_MECHANICAL_REPAIR",
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
+        "lat": 39.1031,
+        "lon": -84.512,
+        "dock_wait_mins": 20,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-CMH-03",
+        "name": "Columbus Crossroads Cryogenic Vault (Mile 142)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE",
+          "COMPRESSOR_MECHANICAL_REPAIR"
+        ],
+        "certifications": [
+          "FDA_21CFR211",
+          "CGMP"
+        ],
+        "lat": 39.9612,
+        "lon": -82.9988,
+        "dock_wait_mins": 10,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-MAN-04",
+        "name": "Mansfield Interstate Cold Relay (Mile 212)",
+        "capabilities": [
+          "DRY_ICE_TOPPING",
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
+        "lat": 40.7584,
+        "lon": -82.5154,
+        "dock_wait_mins": 10,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-AKR-OFFROUTE-05",
+        "name": "Akron Bio-Polymer Cryo Station (Off-Route 30 mi East)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
+        "lat": 41.0814,
+        "lon": -81.519,
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
       }
     ]
   },
   {
     "route_id": "CORR-SAN-LAX",
-    "corridor_name": "SoCal Pacific Bio-Corridor (I-5 N: San Diego \u2794 UCLA Medical, Los Angeles)",
+    "corridor_name": "SoCal Pacific Bio-Corridor (I-5 N / I-405: San Diego \u2794 UCLA Medical, Los Angeles - 128 mi)",
     "origin": {
-      "name": "Torrey Pines Bioresearch Park, San Diego",
+      "facility_id": "HUB-SAN-ORIGIN",
+      "name": "Torrey Pines Bioresearch Gateway (San Diego)",
       "lat": 32.8998,
-      "lon": -117.2359
+      "lon": -117.2359,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "LIQUID_NITROGEN_RECHARGE",
+        "REFRIGERATED_2TO8"
+      ],
+      "certifications": [
+        "FDA_21CFR211",
+        "CGMP"
+      ],
+      "dock_wait_mins": 10,
+      "status": "AVAILABLE"
     },
     "destination": {
-      "name": "Ronald Reagan UCLA Medical Center, Los Angeles",
+      "facility_id": "HUB-UCLA-DEST",
+      "name": "Ronald Reagan UCLA Medical Center (Los Angeles)",
       "lat": 34.0664,
-      "lon": -118.4455
+      "lon": -118.4455,
+      "capabilities": [
+        "ULTRA_LOW_CRYOGENIC",
+        "REFRIGERATED_2TO8",
+        "DRY_ICE_TOPPING"
+      ],
+      "certifications": [
+        "HOSPITAL_CRITICAL_CARE"
+      ],
+      "dock_wait_mins": 0,
+      "status": "AVAILABLE"
     },
     "candidate_hubs": [
       {
-        "facility_id": "FAC-OCN-30",
-        "name": "Oceanside Coastal Cryo Dock (Mile 32)",
-        "type": "Express Recharge Bay",
+        "facility_id": "FAC-OCN-01",
+        "name": "Oceanside Marine Cold Relay Depot (Mile 32)",
+        "capabilities": [
+          "REFRIGERATED_2TO8"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
         "lat": 33.1959,
         "lon": -117.3795,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 620,
-        "liquid_nitrogen_liters": 1500
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-IRV-31",
-        "name": "Irvine Spectrum Life Sciences Hub (Mile 72)",
-        "type": "Regional Cryogenic Biorepository",
+        "facility_id": "FAC-ESC-OFFROUTE-02",
+        "name": "Escondido Inland Dry Ice Vault (Off-Route 22 mi East)",
+        "capabilities": [
+          "DRY_ICE_TOPPING"
+        ],
+        "certifications": [
+          "STANDARD_CARRIER"
+        ],
+        "lat": 33.1192,
+        "lon": -117.0864,
+        "dock_wait_mins": 5,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-IRV-03",
+        "name": "Irvine Spectrum Life Sciences Ultra-Cold Hub (Mile 72)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE",
+          "COMPRESSOR_MECHANICAL_REPAIR"
+        ],
+        "certifications": [
+          "FDA_21CFR211",
+          "CGMP"
+        ],
         "lat": 33.6846,
         "lon": -117.8265,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 1300,
-        "liquid_nitrogen_liters": 3400
+        "dock_wait_mins": 10,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-ANA-32",
-        "name": "Anaheim Cold Freight Logistics (Mile 90)",
-        "type": "Mid-Corridor Refrigeration Bay",
+        "facility_id": "FAC-RIV-OFFROUTE-04",
+        "name": "Riverside Inland Logistics HVAC Depot (Off-Route 38 mi Northeast)",
+        "capabilities": [
+          "COMPRESSOR_MECHANICAL_REPAIR"
+        ],
+        "certifications": [
+          "DOT_STANDARD"
+        ],
+        "lat": 33.9806,
+        "lon": -117.3755,
+        "dock_wait_mins": 25,
+        "status": "AVAILABLE"
+      },
+      {
+        "facility_id": "FAC-ANA-05",
+        "name": "Anaheim Industrial Cold Freight Cross-Dock (Mile 90)",
+        "capabilities": [
+          "REFRIGERATED_2TO8",
+          "DRY_ICE_TOPPING"
+        ],
+        "certifications": [
+          "WHO_GDP"
+        ],
         "lat": 33.8366,
         "lon": -117.9143,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 780,
-        "liquid_nitrogen_liters": 1800
+        "dock_wait_mins": 10,
+        "status": "AVAILABLE"
       },
       {
-        "facility_id": "FAC-DWT-33",
-        "name": "Downey Medical Distribution Center (Mile 108)",
-        "type": "Metro Cryo-Staging Dock",
-        "lat": 33.9401,
-        "lon": -118.1332,
-        "status": "AVAILABLE",
-        "dry_ice_kg": 500,
-        "liquid_nitrogen_liters": 1200
+        "facility_id": "FAC-LGB-OFFROUTE-06",
+        "name": "Long Beach Port Terminal Cryo-Vault (Off-Route 18 mi West)",
+        "capabilities": [
+          "ULTRA_LOW_CRYOGENIC",
+          "LIQUID_NITROGEN_RECHARGE"
+        ],
+        "certifications": [
+          "CGMP"
+        ],
+        "lat": 33.7701,
+        "lon": -118.1937,
+        "dock_wait_mins": 15,
+        "status": "AVAILABLE"
       }
     ]
   }

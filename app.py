@@ -1,3 +1,17 @@
+
+def get_hub_display_color(hub_dict: dict) -> str:
+    """Returns color based on the primary service tier of the facility."""
+    caps = hub_dict.get("capabilities", [])
+    if "ULTRA_LOW_CRYOGENIC" in caps or "LIQUID_NITROGEN_RECHARGE" in caps:
+        return "#a855f7"  # Purple: Ultra-Low Cryogenic Vault
+    elif "COMPRESSOR_MECHANICAL_REPAIR" in caps:
+        return "#f97316"  # Orange: HVAC Mechanical Repair Bay
+    elif "REFRIGERATED_2TO8" in caps:
+        return "#10b981"  # Green: Standard 2°C to 8°C Chiller
+    elif "DRY_ICE_TOPPING" in caps:
+        return "#38bdf8"  # Cyan/Sky Blue: Dry Ice Relay Post
+    return "#64748b"      # Gray: Ambient/Controlled Room Temp
+
 import json
 import math
 import random
@@ -766,23 +780,41 @@ with tab_unified:
             fac_texts = [f"🏭 {route_info['origin']['name']}", f"🏥 {route_info['destination']['name']}"]
             fac_colors = ['#94a3b8', '#38bdf8']
 
-            # Plot all candidate servicing hubs along the highway
+            # 1. Plot Origin Hub (Colored by service capability)
+            orig_hub = route_info["origin"]
+            orig_color = "#fbbf24" if (chosen_hub and chosen_hub.get("facility_id") == orig_hub.get("facility_id")) else get_hub_display_color(orig_hub)
+            fac_lats.append(orig_hub["lat"])
+            fac_lons.append(orig_hub["lon"])
+            fac_texts.append(f"🏭 ORIGIN: {orig_hub['name'][:22]}")
+            fac_colors.append(orig_color)
+
+            # 2. Plot Destination Hub (Colored by service capability)
+            dest_hub = route_info["destination"]
+            dest_color = "#fbbf24" if (chosen_hub and chosen_hub.get("facility_id") == dest_hub.get("facility_id")) else get_hub_display_color(dest_hub)
+            fac_lats.append(dest_hub["lat"])
+            fac_lons.append(dest_hub["lon"])
+            fac_texts.append(f"🏥 DESTINATION: {dest_hub['name'][:22]}")
+            fac_colors.append(dest_color)
+
+            # 3. Plot All Candidate Intermediate Hubs (Both On-Highway & Off-Route)
             for h in route_info.get("candidate_hubs", []):
                 is_selected = chosen_hub and h.get("facility_id") == chosen_hub.get("facility_id")
+                fac_lats.append(h["lat"])
+                fac_lons.append(h["lon"])
+                services_summary = "/".join([c[:4] for c in h.get("capabilities", [])])
+                
                 if is_selected:
-                    fac_lats.append(h["lat"])
-                    fac_lons.append(h["lon"])
-                    fac_texts.append(f"⭐ ACTIVE TARGET: {h['name']}")
+                    fac_texts.append(f"⭐ ACTIVE TARGET: {h['name'][:24]}")
                     fac_colors.append("#fbbf24")
                 else:
-                    fac_lats.append(h["lat"])
-                    fac_lons.append(h["lon"])
-                    fac_texts.append(f"🏢 Hub: {h['name'][:22]}")
-                    fac_colors.append("#38bdf8" if st.session_state["sim_state"] == "NOMINAL" else "#64748b")
+                    is_offroute = "OFFROUTE" in h.get("facility_id", "") or "Off-Route" in h.get("name", "")
+                    prefix = "🌐 OFF-ROUTE" if is_offroute else "🏢 HUB"
+                    fac_texts.append(f"{prefix}: {h['name'][:20]} [{services_summary}]")
+                    fac_colors.append(get_hub_display_color(h))
 
             fig_map.add_trace(MapTrace(
                 lat=fac_lats, lon=fac_lons, mode='markers+text',
-                marker=dict(size=12, color=fac_colors),
+                marker=dict(size=14, color=fac_colors),
                 text=fac_texts, textposition="bottom right", name="Facilities"
             ))
 
@@ -791,6 +823,19 @@ with tab_unified:
 
         # Direct in-column render without unkeyed wrappers
         map_col.plotly_chart(fig_map, use_container_width=True, key="unique_app_telematics_map")
+
+        # Facility Capability Color Legend
+        st.markdown("""
+        <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; padding: 8px 12px; background: #0f172a; border-radius: 6px; font-size: 0.76rem; border: 1px solid #1e293b;">
+            <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #a855f7; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>🟣 Ultra-Low Cryo (LN2)</span>
+            <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #f97316; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>🟠 HVAC Mechanical Bay</span>
+            <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>🟢 2°C to 8°C Chiller</span>
+            <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #38bdf8; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>🔵 Dry Ice Relay Post</span>
+            <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #64748b; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>⚪ Ambient / CRT Depot</span>
+            <span style="display: inline-flex; align-items: center;"><span style="width: 10px; height: 10px; background: #fbbf24; border-radius: 50%; display: inline-block; margin-right: 6px;"></span>⭐ Active Recovery Target</span>
+        </div>
+        """, unsafe_allow_html=True)
+
 
     with log_col:
         st.markdown("<h5 style='margin-bottom: 6px;'>📜 Real-Time Autonomous Operations Log Stream</h5>", unsafe_allow_html=True)
@@ -1051,14 +1096,31 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             res = run_cryoguard_mission(active_payload, is_replan=False)
             st.session_state["mission_result"] = res
             
+            from src.agent import evaluate_facility_compatibility
             cand_hubs = route_info.get("candidate_hubs", [])
-            # Dynamic proximity ranking from vehicle current coordinates
+            origin_pt = route_info["origin"]
+            dest_pt = route_info["destination"]
+            
             c_lat, c_lon = st.session_state["cur_lat"], st.session_state["cur_lon"]
-            ranked_hubs = sorted(
-                cand_hubs,
-                key=lambda h: math.hypot(h["lat"] - c_lat, h["lon"] - c_lon)
-            )
-            chosen_hub = ranked_hubs[0] if ranked_hubs else cand_hubs[0]
+            decision = evaluate_facility_compatibility(cust, active_anom, cand_hubs, c_lat, c_lon, origin_pt, dest_pt)
+            
+            strategy = decision["strategy"]
+            if strategy == "DIVERT_SPECIALTY_HUB" and decision["best_hub"]:
+                chosen_hub = decision["best_hub"]
+                target_dest = (chosen_hub["lat"], chosen_hub["lon"])
+                st.session_state["chosen_hub"] = chosen_hub
+                st.session_state["run_logs"].append(f"[T+{clock:02d}s] 🏢 Facility Decision: Selected specialized facility {chosen_hub['name']} (Capabilities: {', '.join(chosen_hub.get('capabilities', []))}).")
+            elif strategy == "ABORT_RETURN_TO_ORIGIN":
+                chosen_hub = {"name": f"RETURN TO ORIGIN: {origin_pt['name']}", "lat": origin_pt["lat"], "lon": origin_pt["lon"], "facility_id": "ORIGIN_RETURN"}
+                st.session_state["chosen_hub"] = chosen_hub
+                target_dest = (origin_pt["lat"], origin_pt["lon"])
+                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ STRATEGIC ABORT: No intermediate facility supports required cryo service. Returning to origin!")
+            else:
+                chosen_hub = {"name": f"PUSH TO CONSIGNEE: {dest_pt['name']}", "lat": dest_pt["lat"], "lon": dest_pt["lon"], "facility_id": "DEST_PUSH"}
+                st.session_state["chosen_hub"] = chosen_hub
+                target_dest = (dest_pt["lat"], dest_pt["lon"])
+                st.session_state["is_partial_breach"] = True
+                st.session_state["run_logs"].append(f"[T+{clock:02d}s] ⚠️ EXPEDITE PUSH: Continuing to Consignee under SLA Delay Penalty. Inbound emergency dock notified.")
                 
             st.session_state["chosen_hub"] = chosen_hub
             
