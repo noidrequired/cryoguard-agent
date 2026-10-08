@@ -1,409 +1,225 @@
 [
   {
-    "route_id": "CORR-CHI-RCH",
-    "corridor_name": "I-90 Midwest Corridor (Chicago, IL ➔ Rochester, MN)",
-    "client": "BioVanguard Therapeutics",
-    "destination_facility": "Mayo Clinic Cellular Processing Facility",
-    "origin": {"name": "Chicago DC Hub", "lat": 41.8781, "lon": -87.6298},
-    "destination": {"name": "Mayo Clinic Rochester", "lat": 44.0121, "lon": -92.4802},
+    "route_id": "CORR-SSF-STF",
+    "corridor_name": "Bayshore Biotech Corridor (US-101 S: South San Francisco \u2794 Stanford Medical)",
+    "origin": {
+      "name": "Genentech Logistics Campus, South San Francisco",
+      "lat": 37.6547,
+      "lon": -122.4077
+    },
+    "destination": {
+      "name": "Stanford Medicine Cancer Institute, Palo Alto",
+      "lat": 37.4346,
+      "lon": -122.1751
+    },
     "candidate_hubs": [
       {
-        "facility_id": "DEPOT-MSN-CRYODOCK",
-        "name": "Apex Madison CryoDock (MM 142)",
+        "facility_id": "FAC-SFO-01",
+        "name": "SFO Airfreight Cold-Dock Alpha",
+        "type": "Airport Refrigerated Cargo Bay",
+        "lat": 37.6189,
+        "lon": -122.375,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 420,
+        "liquid_nitrogen_liters": 950
+      },
+      {
+        "facility_id": "FAC-SMT-02",
+        "name": "San Mateo GxP Cryo Distribution Center",
+        "type": "Mid-Peninsula Clinical Depot",
+        "lat": 37.563,
+        "lon": -122.3255,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 650,
+        "liquid_nitrogen_liters": 1400
+      },
+      {
+        "facility_id": "FAC-RWC-03",
+        "name": "Redwood City Life Sciences Transit Hub",
+        "type": "Bio-Logistics Rapid Recharge Dock",
+        "lat": 37.4852,
+        "lon": -122.2364,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 800,
+        "liquid_nitrogen_liters": 1800
+      },
+      {
+        "facility_id": "FAC-PAL-04",
+        "name": "Silicon Valley Biorepository Depots",
+        "type": "Clinical Terminal Cold Storage",
+        "lat": 37.4419,
+        "lon": -122.143,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 350,
+        "liquid_nitrogen_liters": 850
+      }
+    ]
+  },
+  {
+    "route_id": "CORR-CHI-RCH",
+    "corridor_name": "I-90 Midwest Medical Corridor (Chicago, IL \u2794 Rochester, MN)",
+    "origin": {
+      "name": "O'Hare International Air Cargo Terminal, Chicago",
+      "lat": 41.9742,
+      "lon": -87.9073
+    },
+    "destination": {
+      "name": "Mayo Clinic Bio-Therapeutics Pavilion, Rochester",
+      "lat": 44.0225,
+      "lon": -92.4666
+    },
+    "candidate_hubs": [
+      {
+        "facility_id": "FAC-RFD-10",
+        "name": "Rockford Interstate Cold Hub (Mile 65)",
+        "type": "Express Highway Cold-Dock",
+        "lat": 42.2711,
+        "lon": -89.094,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 1200,
+        "liquid_nitrogen_liters": 2400
+      },
+      {
+        "facility_id": "FAC-MSN-11",
+        "name": "Madison Biotech Distribution Center (Mile 140)",
+        "type": "State Bio-Logistics Terminal",
         "lat": 43.0731,
         "lon": -89.4012,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
+        "status": "AVAILABLE",
+        "dry_ice_kg": 890,
+        "liquid_nitrogen_liters": 3100
       },
       {
-        "facility_id": "DEPOT-JVL-MOBILE-YARD",
-        "name": "Janesville Interstate Fleet Repair Bay",
-        "lat": 42.6828,
-        "lon": -89.0187,
-        "capabilities": ["Reefer Compressor Repair", "Mobile Battery Swap", "Alternator Overhaul"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
+        "facility_id": "FAC-LCR-12",
+        "name": "La Crosse Mississippi Crossing Dock (Mile 245)",
+        "type": "Regional GxP Recharge Facility",
+        "lat": 43.8014,
+        "lon": -91.2396,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 450,
+        "liquid_nitrogen_liters": 1200
       },
       {
-        "facility_id": "DEPOT-MSN-LN2-VAPOR",
-        "name": "Dane County LN2 CryoStation",
-        "lat": 43.1415,
-        "lon": -89.3325,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Ultra-Low Cryo <-150C"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
+        "facility_id": "FAC-RCH-13",
+        "name": "Rochester Metro Receiving Cold Hub (Mile 320)",
+        "type": "Consignee Staging Dock",
+        "lat": 43.9982,
+        "lon": -92.3515,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 600,
+        "liquid_nitrogen_liters": 1500
       }
     ]
   },
   {
     "route_id": "CORR-BOS-NYC",
-    "corridor_name": "I-95 Northeast Corridor (Boston, MA ➔ New York, NY)",
-    "client": "Vertex BioPharma",
-    "destination_facility": "Memorial Sloan Kettering Cancer Center",
-    "origin": {"name": "Boston BioHub (Cambridge)", "lat": 42.3601, "lon": -71.0942},
-    "destination": {"name": "Memorial Sloan Kettering NYC", "lat": 40.7641, "lon": -73.9568},
+    "corridor_name": "Northeast Life Sciences Arterial (I-90/I-84: Boston, MA \u2794 Manhattan, NY)",
+    "origin": {
+      "name": "Kendall Square Bio-Cluster, Cambridge/Boston",
+      "lat": 42.3601,
+      "lon": -71.0942
+    },
+    "destination": {
+      "name": "Memorial Sloan Kettering, New York City",
+      "lat": 40.7641,
+      "lon": -73.9568
+    },
     "candidate_hubs": [
       {
-        "facility_id": "DEPOT-HTF-CRYOLOG",
-        "name": "Hartford Cryo Logistics (Hartford, CT)",
+        "facility_id": "FAC-WOR-20",
+        "name": "Worcester Biotech Cross-Dock (Mile 42)",
+        "type": "High-Volume Dry Ice Depot",
+        "lat": 42.2626,
+        "lon": -71.8023,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 1100,
+        "liquid_nitrogen_liters": 2200
+      },
+      {
+        "facility_id": "FAC-HFD-21",
+        "name": "Hartford Capital Cold-Chain Terminal (Mile 102)",
+        "type": "Regional Cryogenic Bay",
         "lat": 41.7658,
         "lon": -72.6734,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
+        "status": "AVAILABLE",
+        "dry_ice_kg": 750,
+        "liquid_nitrogen_liters": 1900
       },
       {
-        "facility_id": "DEPOT-NHV-TECH-YARD",
-        "name": "New Haven Fleet Reefer Service Center",
-        "lat": 41.3083,
-        "lon": -72.9279,
-        "capabilities": ["Reefer Compressor Repair", "Mobile Battery Swap"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
+        "facility_id": "FAC-DAN-22",
+        "name": "Danbury Interstate Cold Logistics (Mile 155)",
+        "type": "Express Recharge Dock",
+        "lat": 41.3948,
+        "lon": -73.454,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 500,
+        "liquid_nitrogen_liters": 1400
       },
       {
-        "facility_id": "DEPOT-PRV-LN2-STATION",
-        "name": "Providence Cryogenic Vault",
-        "lat": 41.8240,
-        "lon": -71.4128,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Re-Seal Inspection"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-PHL-BAL",
-    "corridor_name": "I-95 Mid-Atlantic Corridor (Philadelphia, PA ➔ Baltimore, MD)",
-    "client": "Spark Therapeutics",
-    "destination_facility": "Johns Hopkins Hospital Cellular Therapy Lab",
-    "origin": {"name": "Philadelphia Navy Yard DC", "lat": 39.8938, "lon": -75.1742},
-    "destination": {"name": "Johns Hopkins Hospital", "lat": 39.2975, "lon": -76.5927},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-WIL-MEDVAULT",
-        "name": "Wilmington MedVault (Wilmington, DE)",
-        "lat": 39.7447,
-        "lon": -75.5484,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-NWK-MOBILE",
-        "name": "Newark DE Roadside Fleet Depot",
-        "lat": 39.6837,
-        "lon": -75.7497,
-        "capabilities": ["Reefer Compressor Repair", "Alternator Overhaul"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-ELK-LN2",
-        "name": "Elkton Cryo & Sterile CrossDock",
-        "lat": 39.6068,
-        "lon": -75.8333,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Barrier Seal"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-SSF-STF",
-    "corridor_name": "US-101 Bay Area Life Sciences Corridor (South San Francisco ➔ Palo Alto, CA)",
-    "client": "Genentech / Roche Cell Systems",
-    "destination_facility": "Stanford University Medical Center",
-    "origin": {"name": "South San Francisco BioCampus", "lat": 37.6547, "lon": -122.4077},
-    "destination": {"name": "Stanford Health Care Center", "lat": 37.4346, "lon": -122.1751},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-SM-CRYO",
-        "name": "San Mateo CryoVault (San Mateo, CA)",
-        "lat": 37.5630,
-        "lon": -122.3255,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-BRL-MOBILE",
-        "name": "Burlingame Mobile ThermoFleet Hub",
-        "lat": 37.5841,
-        "lon": -122.3661,
-        "capabilities": ["Mobile Battery Swap", "Inverter Repair"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-RC-LN2",
-        "name": "Redwood City Ultra-Cold Station",
-        "lat": 37.4852,
-        "lon": -122.2364,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Quarantine Inspection"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-SEA-PDX",
-    "corridor_name": "I-5 Pacific Northwest Corridor (Seattle, WA ➔ Portland, OR)",
-    "client": "Fred Hutchinson Therapeutics",
-    "destination_facility": "OHSU Knight Cancer Institute",
-    "origin": {"name": "Seattle BioDepot (Bothell, WA)", "lat": 47.7601, "lon": -122.2054},
-    "destination": {"name": "OHSU Knight Cancer Institute", "lat": 45.4984, "lon": -122.6859},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-OLY-DOCK",
-        "name": "Olympia Pharma-Cold Dock (Olympia, WA)",
-        "lat": 47.0379,
-        "lon": -122.9007,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-TAC-FLEET",
-        "name": "Tacoma Heavy Reefer Diagnostics",
-        "lat": 47.2529,
-        "lon": -122.4443,
-        "capabilities": ["Reefer Compressor Repair", "Alternator Overhaul"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-CEN-LN2",
-        "name": "Centralia Cryo Preservation Center",
-        "lat": 46.7162,
-        "lon": -122.9543,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Barrier Seal"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-IND-CLE",
-    "corridor_name": "I-71 Great Lakes Corridor (Indianapolis, IN ➔ Cleveland, OH)",
-    "client": "Eli Lilly Specialty Operations",
-    "destination_facility": "Cleveland Clinic Biorepository",
-    "origin": {"name": "Indianapolis Global Logistics Hub", "lat": 39.7684, "lon": -86.1581},
-    "destination": {"name": "Cleveland Clinic Main Campus", "lat": 41.5034, "lon": -81.6214},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-CMH-THERMAL",
-        "name": "Columbus Thermal Express (Columbus, OH)",
-        "lat": 39.9612,
-        "lon": -82.9988,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-DAY-REPAIR",
-        "name": "Dayton Interstate Fleet Maintenance",
-        "lat": 39.7589,
-        "lon": -84.1916,
-        "capabilities": ["Reefer Compressor Repair", "Inverter Swap"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-MANS-LN2",
-        "name": "Mansfield Cryo Station",
-        "lat": 40.7584,
-        "lon": -82.5154,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Seal Repack"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-HOU-DAL",
-    "corridor_name": "I-45 Texas Medical Corridor (Houston ➔ Dallas, TX)",
-    "client": "MD Anderson Cell Logistics",
-    "destination_facility": "UT Southwestern Medical Center",
-    "origin": {"name": "Texas Medical Center Hub (Houston)", "lat": 29.7071, "lon": -95.3968},
-    "destination": {"name": "UT Southwestern Medical Center", "lat": 32.8125, "lon": -96.8398},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-CORS-DOCK",
-        "name": "Corsicana Thermal Rest Stop (Corsicana, TX)",
-        "lat": 32.0954,
-        "lon": -96.4689,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-HNT-MOBILE",
-        "name": "Huntsville Mobile Reefer Squad",
-        "lat": 30.7235,
-        "lon": -95.5508,
-        "capabilities": ["Reefer Compressor Repair", "Alternator Overhaul"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-ENNS-LN2",
-        "name": "Ennis Cryo Logistics Station",
-        "lat": 32.3299,
-        "lon": -96.6253,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Barrier Seal"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-RTP-ATL",
-    "corridor_name": "I-85 Southeast Corridor (Raleigh, NC ➔ Atlanta, GA)",
-    "client": "Precision BioSciences",
-    "destination_facility": "Emory University Hospital Surgical Suite",
-    "origin": {"name": "RTP Biomanufacturing Depot", "lat": 35.9132, "lon": -78.8689},
-    "destination": {"name": "Emory University Hospital", "lat": 33.7925, "lon": -84.3236},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-CLT-DOCK",
-        "name": "Charlotte Cold-Chain CrossDock",
-        "lat": 35.2271,
-        "lon": -80.8431,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-GSO-MOBILE",
-        "name": "Greensboro Heavy Fleet Intercept",
-        "lat": 36.0726,
-        "lon": -79.7920,
-        "capabilities": ["Reefer Compressor Repair", "Battery Pack Swap"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-SPTN-LN2",
-        "name": "Spartanburg Cryo Logistics",
-        "lat": 34.9496,
-        "lon": -81.9321,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Seal Repack"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
+        "facility_id": "FAC-WCH-23",
+        "name": "Westchester Life Sciences Depot (Mile 190)",
+        "type": "Metro Perimeter Cold Facility",
+        "lat": 41.034,
+        "lon": -73.7629,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 950,
+        "liquid_nitrogen_liters": 2600
       }
     ]
   },
   {
     "route_id": "CORR-SAN-LAX",
-    "corridor_name": "I-5 Southern California Corridor (San Diego ➔ Los Angeles, CA)",
-    "client": "Illumina Clinical Logistics",
-    "destination_facility": "Ronald Reagan UCLA Medical Center",
-    "origin": {"name": "Torrey Pines BioCenter (San Diego)", "lat": 32.8998, "lon": -117.2359},
-    "destination": {"name": "UCLA Ronald Reagan MedCenter", "lat": 34.0664, "lon": -118.4455},
+    "corridor_name": "SoCal Pacific Bio-Corridor (I-5 N: San Diego \u2794 UCLA Medical, Los Angeles)",
+    "origin": {
+      "name": "Torrey Pines Bioresearch Park, San Diego",
+      "lat": 32.8998,
+      "lon": -117.2359
+    },
+    "destination": {
+      "name": "Ronald Reagan UCLA Medical Center, Los Angeles",
+      "lat": 34.0664,
+      "lon": -118.4455
+    },
     "candidate_hubs": [
       {
-        "facility_id": "DEPOT-IRV-DOCK",
-        "name": "Irvine Cold-Chain Dock (Irvine, CA)",
+        "facility_id": "FAC-OCN-30",
+        "name": "Oceanside Coastal Cryo Dock (Mile 32)",
+        "type": "Express Recharge Bay",
+        "lat": 33.1959,
+        "lon": -117.3795,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 620,
+        "liquid_nitrogen_liters": 1500
+      },
+      {
+        "facility_id": "FAC-IRV-31",
+        "name": "Irvine Spectrum Life Sciences Hub (Mile 72)",
+        "type": "Regional Cryogenic Biorepository",
         "lat": 33.6846,
         "lon": -117.8265,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
+        "status": "AVAILABLE",
+        "dry_ice_kg": 1300,
+        "liquid_nitrogen_liters": 3400
       },
       {
-        "facility_id": "DEPOT-OC-MOBILE",
-        "name": "Orange County Mobile Reefer Unit",
-        "lat": 33.7175,
-        "lon": -117.8311,
-        "capabilities": ["Reefer Compressor Repair", "Alternator Overhaul"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-ANA-LN2",
-        "name": "Anaheim Cryogenic Terminal",
+        "facility_id": "FAC-ANA-32",
+        "name": "Anaheim Cold Freight Logistics (Mile 90)",
+        "type": "Mid-Corridor Refrigeration Bay",
         "lat": 33.8366,
         "lon": -117.9143,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Barrier Seal"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-MSP-MSN",
-    "corridor_name": "I-94 Upper Midwest Corridor (Minneapolis, MN ➔ Madison, WI)",
-    "client": "Be The Match BioLogistics",
-    "destination_facility": "UW Health University Hospital",
-    "origin": {"name": "Minneapolis BioVault Depot", "lat": 44.9778, "lon": -93.2650},
-    "destination": {"name": "UW Health Madison", "lat": 43.0766, "lon": -89.4312},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-EAU-CRYO",
-        "name": "Eau Claire CryoStation (Eau Claire, WI)",
-        "lat": 44.8113,
-        "lon": -91.4985,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
+        "status": "AVAILABLE",
+        "dry_ice_kg": 780,
+        "liquid_nitrogen_liters": 1800
       },
       {
-        "facility_id": "DEPOT-TOM-MOBILE",
-        "name": "Tomah Interstate Roadside Bay",
-        "lat": 43.9844,
-        "lon": -90.5043,
-        "capabilities": ["Reefer Compressor Repair", "Battery Swap"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-WISD-LN2",
-        "name": "Wisconsin Dells Medical Vault",
-        "lat": 43.6275,
-        "lon": -89.7710,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Seal Repack"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-MEM-BNA",
-    "corridor_name": "I-40 Mid-South Corridor (Memphis ➔ Nashville, TN)",
-    "client": "St. Jude Children's BioLogistics",
-    "destination_facility": "Vanderbilt University Medical Center",
-    "origin": {"name": "Memphis Global Cold Hub", "lat": 35.1495, "lon": -90.0490},
-    "destination": {"name": "Vanderbilt University Medical Center", "lat": 36.1447, "lon": -86.8034},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-JCK-DOCK",
-        "name": "Jackson Medical CrossDock (Jackson, TN)",
-        "lat": 35.6145,
-        "lon": -88.8139,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-BRN-MOBILE",
-        "name": "Brownsville Mobile Repair Unit",
-        "lat": 35.5940,
-        "lon": -89.2612,
-        "capabilities": ["Reefer Compressor Repair", "Inverter Swap"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-DCK-LN2",
-        "name": "Dickson Cryo Vault",
-        "lat": 36.0762,
-        "lon": -87.3878,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Barrier Seal"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
-      }
-    ]
-  },
-  {
-    "route_id": "CORR-MCI-STL",
-    "corridor_name": "I-70 Heartland Corridor (Kansas City ➔ St. Louis, MO)",
-    "client": "Centaur Pharma Operations",
-    "destination_facility": "Barnes-Jewish Hospital Clinical Center",
-    "origin": {"name": "Kansas City BioSupply Depot", "lat": 39.0997, "lon": -94.5786},
-    "destination": {"name": "Barnes-Jewish Hospital St. Louis", "lat": 38.6366, "lon": -90.2644},
-    "candidate_hubs": [
-      {
-        "facility_id": "DEPOT-COL-DOCK",
-        "name": "Columbia Central Dock (Columbia, MO)",
-        "lat": 38.9517,
-        "lon": -92.3341,
-        "capabilities": ["Dry Ice Refill", "Refrigerated Cross-Dock (2-8C)"],
-        "match_types": ["COLD_DOCK_RECHARGE"]
-      },
-      {
-        "facility_id": "DEPOT-BOON-MOBILE",
-        "name": "Boonville Roadside Fleet Shop",
-        "lat": 38.9736,
-        "lon": -92.7432,
-        "capabilities": ["Reefer Compressor Repair", "Alternator Overhaul"],
-        "match_types": ["MOBILE_TECH_INTERCEPT"]
-      },
-      {
-        "facility_id": "DEPOT-STC-LN2",
-        "name": "St. Charles Cryo Terminal",
-        "lat": 38.7881,
-        "lon": -90.4974,
-        "capabilities": ["Liquid Nitrogen Top-Off", "Sterile Barrier Seal"],
-        "match_types": ["CRYOGENIC_LN2_RECHARGE", "STERILE_RESEAL_INSPECT", "HOTSHOT_RELAY"]
+        "facility_id": "FAC-DWT-33",
+        "name": "Downey Medical Distribution Center (Mile 108)",
+        "type": "Metro Cryo-Staging Dock",
+        "lat": 33.9401,
+        "lon": -118.1332,
+        "status": "AVAILABLE",
+        "dry_ice_kg": 500,
+        "liquid_nitrogen_liters": 1200
       }
     ]
   }
