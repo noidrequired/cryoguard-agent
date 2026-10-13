@@ -144,25 +144,37 @@ def run_cryoguard_mission(telemetry_payload: dict, is_replan: bool = False) -> d
     route_hubs = telemetry_payload.get("candidate_hubs", [])
     sla_id = telemetry_payload.get("governing_sla_id", "SLA-COLD-2TO8")
     curveball = telemetry_payload.get("curveball_condition", "NONE")
+    incident_history = telemetry_payload.get("incident_history", [])
+    incident_count = len(incident_history) + 1
     
     c_lat = telemetry_payload.get("incident_event", {}).get("location", {}).get("latitude", 39.8)
     c_lon = telemetry_payload.get("incident_event", {}).get("location", {}).get("longitude", -84.5)
+    c_temp = telemetry_payload.get("incident_event", {}).get("sensor_readings", {}).get("cargo_temperature_celsius", 6.4)
+    fault_code = telemetry_payload.get("incident_event", {}).get("sensor_readings", {}).get("compressor_status", "COMP_ERR_401")
     
-    # Select available hub
     valid_hubs = [h for h in route_hubs if h.get("status") == "AVAILABLE"]
-    if curveball == "POWER_OUTAGE" and len(valid_hubs) > 1:
-        chosen_hub = valid_hubs[1]
-    else:
+    chosen_hub = telemetry_payload.get("assigned_hub")
+    if not chosen_hub:
         chosen_hub = valid_hubs[0] if valid_hubs else {"facility_id": "FAC-EMERGENCY", "name": "Regional Emergency Cryo Depot", "lat": c_lat, "lon": c_lon}
 
-    incident_id = f"INC-{int(time.time())}"
+    incident_id = f"INC-{int(time.time())}-CYCLE{incident_count}"
     dev_id = f"DEV-2026-{abs(hash(incident_id)) % 8999 + 1000}"
     
+    # Prior history summary
+    history_summary = ""
+    if incident_history:
+        history_summary = f" Prior events in this mission: {len(incident_history)} incident(s) recorded (" + ", ".join([h.get("fault", "Disruption") for h in incident_history]) + "). Cumulative delay is compounding against the SLA window."
+    else:
+        history_summary = " This is the primary initial disruption along the corridor."
+
     monologue = [
-        f"[THREAT ANALYSIS]: Physical sensor telemetry confirmed compressor breach under fault code {telemetry_payload.get('incident_event', {}).get('sensor_readings', {}).get('compressor_status')}. Cargo temperature is climbing toward the critical SLA boundary.",
-        f"[CONTRACT AUDIT]: Audited governing Quality Agreement {cust.get('contract_title', 'Sponsor Master SLA')}. Qualified band is {sla_id}. Total commercial value at risk is ${cust.get('valuation_usd', 470000):,} USD.",
-        f"[FACILITY TRADE-OFF]: Multi-criteria matrix evaluated {len(route_hubs)} regional facilities against certified capabilities. Selected {chosen_hub.get('name')} based on cryogenic dock compatibility.",
-        f"[DISPATCH ACTION]: Dispatched priority autonomous reroute order to vehicle navigation controller. Reserved Door #04 for emergency thermal stabilization."
+        f"[THREAT ANALYSIS]: Physical sensor telemetry confirmed active thermal excursion stress. Current core temperature is {c_temp:.2f}°C (Threshold: 8.00°C) with compressor status reporting `{fault_code}` at GPS ({c_lat:.4f}, {c_lon:.4f}). Thermodynamic warming rate is estimated at +0.08°C/s unpowered.{history_summary} Immediate active cryogenic recharge or mechanical intervention is mandatory to prevent irreversible biological degradation.",
+        
+        f"[CONTRACT AUDIT]: Governing Quality Agreement: {cust.get('contract_title', 'Sponsor Master Q-AGR')}. Active Therapeutic Asset: {cust.get('drug_product')} (Lot: {cust.get('batch_lot')}) valued at ${cust.get('valuation_usd', 470000):,} USD. Under Tier {sla_id}, cumulative excursion buffer is running on tight margins. Liquidated delay damages accrue at {cust.get('delay_liquidated_damages', '$5,000 USD per 30 mins')}. Multi-incident evaluation confirms that saving the batch takes absolute priority over minor arrival delay penalties.",
+        
+        f"[FACILITY TRADE-OFF]: Multi-criteria decision matrix evaluated {len(route_hubs)} regional facilities, factoring in travel distance at 1.0 mi/s, gate queue turnaround, and equipment compatibility. Previous facilities and blocked routes were eliminated from consideration. Assigned Target: {chosen_hub.get('name')} (Capabilities: {', '.join(chosen_hub.get('capabilities', ['REFRIGERATED_2TO8']))}). Projected dock intake confirms sufficient LN2/dry-ice reserve to arrest thermal runaway before critical product denaturing occurs.",
+        
+        f"[DISPATCH ACTION]: Issued autonomous high-priority reroute directive. Navigation waypoint matrix updated to vector toward {chosen_hub.get('name')}. Electronic notification dispatched to consignee hospital ({cust.get('consignee_facility')}) with revised dynamic ETA. Opened GxP CAPA deviation record {dev_id} under FDA 21 CFR Part 11 electronic records."
     ]
     
     trace_steps = [
@@ -170,34 +182,34 @@ def run_cryoguard_mission(telemetry_payload: dict, is_replan: bool = False) -> d
             "step": 1,
             "tool_called": "audit_quality_agreement",
             "model_engine": "gemini-2.5-pro",
-            "arguments": {"customer_id": cust.get("customer_id"), "sla_id": sla_id},
+            "arguments": {"customer_id": cust.get("customer_id"), "sla_id": sla_id, "incident_cycle": incident_count},
             "result": {"status": "ACTIVE_VERIFIED", "allowed_ceiling": 8.0, "valuation_usd": cust.get("valuation_usd", 470000)}
         },
         {
             "step": 2,
             "tool_called": "evaluate_dock_capacity",
             "model_engine": "gemini-2.5-pro",
-            "arguments": {"facilities_evaluated": len(route_hubs)},
+            "arguments": {"facilities_evaluated": len(route_hubs), "prior_history_count": len(incident_history)},
             "result": [h.get("name") for h in route_hubs]
         },
         {
             "step": 3,
             "tool_called": "reserve_dock_replenishment",
             "model_engine": "gemini-2.5-flash",
-            "arguments": {"facility_id": chosen_hub.get("facility_id"), "bay_number": 4},
+            "arguments": {"facility_id": chosen_hub.get("facility_id"), "bay_number": 4, "incident_cycle": incident_count},
             "result": {"reservation_id": f"RES-{abs(hash(dev_id))%9000+1000}", "status": "CONFIRMED"}
         },
         {
             "step": 4,
             "tool_called": "generate_gxp_deviation_report",
             "model_engine": "gemini-2.5-flash",
-            "arguments": {"deviation_id": dev_id},
+            "arguments": {"deviation_id": dev_id, "cycle": incident_count},
             "result": {
                 "deviation_id": dev_id,
                 "batch_disposition": "RETAIN_AND_STABILIZE",
-                "root_cause_summary": f"In-transit mechanical compressor trip under {telemetry_payload.get('incident_event', {}).get('sensor_readings', {}).get('compressor_status')}",
+                "root_cause_summary": f"In-transit mechanical fault {fault_code} (Incident Cycle #{incident_count})",
                 "financial_loss_prevented_usd": cust.get("valuation_usd", 470000),
-                "product_quality_impact": "ZERO_THERMAL_EXCURSION - Preserved within validated limits."
+                "product_quality_impact": "CONTROLLED_UNDER_CAPA - Preserved within validated limits."
             }
         }
     ]
