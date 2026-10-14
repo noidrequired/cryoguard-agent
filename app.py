@@ -969,7 +969,7 @@ with tab_unified:
             log_html = '<div class="log-box"><div class="log-line">[--:--:--] ⚪ System in standby. Select customer parameters and click "Launch".</div></div>'
         else:
             log_html = '<div class="log-box" id="telematics-log-box">'
-            for entry in st.session_state["run_logs"]:
+            for entry in reversed(st.session_state["run_logs"]):
                 log_html += f'<div class="log-line">{entry}</div>'
             log_html += '</div>'
         log_col.markdown(log_html, unsafe_allow_html=True)
