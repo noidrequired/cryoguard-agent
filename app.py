@@ -442,9 +442,11 @@ with st.container():
         curveball_opts = {
             "AUTO": "🎲 Auto (Triage Pivot)",
             "NONE": "Nominal Protocol",
-            "POWER_OUTAGE": "⚡ Substation Outage",
-            "DETOUR_BLOCKED": "🚧 Ramp Blocked",
-            "SURGERY_MOVED_UP": "🏥 Surgery -45m"
+            "POWER_OUTAGE": "⚡ Substation Transformer Outage",
+            "DETOUR_BLOCKED": "🚧 Exit Ramp Hazmat Blockade",
+            "SURGERY_MOVED_UP": "🏥 Clinical Surgery Moved Up (-45m)",
+            "LN2_LEAK": "❄️ Liquid N2 Manifold Pressure Breach",
+            "CIVIL_DEMO": "⛔ Urban Access Civil Demonstration"
         }
         sel_cb = st.selectbox(
             "Corridor Modifier:",
@@ -575,28 +577,24 @@ with st.container():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Live Mission Clock Bar
+# Live Mission Clock Bar & Dual Injection Buttons
 bar_c1, bar_c2 = st.columns([2, 1.2])
 with bar_c1:
     if st.session_state["has_run_started"]:
         sim_time_str = st.session_state["current_sim_time"].strftime("%H:%M:%S") if st.session_state.get("current_sim_time") else "--:--:--"
         dep_time_str = st.session_state["mission_start_time"].strftime("%H:%M:%S") if st.session_state.get("mission_start_time") else "--:--:--"
         eta_str = st.session_state["current_eta_time"].strftime("%H:%M:%S") if st.session_state.get("current_eta_time") else "--:--:--"
-        cust_badge = st.session_state['active_customer']['customer_name']
         cur_mi = st.session_state.get("miles_traversed", 0.0)
         tot_mi = st.session_state.get("total_corridor_miles", 0.0)
         
         st.markdown(f"""
-        <div style="padding: 2px 0 6px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+        <div style="padding: 4px 0 8px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
             <div>
-                <span style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">🕒 Live Clock: {sim_time_str}</span>
-                <span style="margin-left: 10px; font-size: 0.84rem; color: #94a3b8;">(Dep: <b>{dep_time_str}</b> | ETA: <b>{eta_str}</b>)</span>
+                <span style="font-size: 1.30rem; font-weight: 800; color: #38bdf8;">🕒 Live Clock: {sim_time_str}</span>
+                <span style="margin-left: 10px; font-size: 0.86rem; color: #94a3b8;">(Departure: <b>{dep_time_str}</b> | Estimated Arrival: <b>{eta_str}</b>)</span>
             </div>
-            <div style="font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; color: #a7f3d0;">
-                🛣️ {cur_mi:.1f} / {tot_mi:.1f} mi (1.0 mi/s) | GPS ({st.session_state['cur_lat']:.4f}, {st.session_state['cur_lon']:.4f})
-            </div>
-            <div style="background: #1e293b; color: #94a3b8; font-size: 0.8rem; padding: 4px 10px; border-radius: 4px;">
-                Client: <b>{cust_badge}</b>
+            <div style="font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.90rem; color: #a7f3d0;">
+                🛣️ Distance: <b>{cur_mi:.1f}</b> / {tot_mi:.1f} mi (1.0 mi/s) | GPS: <b>({st.session_state['cur_lat']:.4f}, {st.session_state['cur_lon']:.4f})</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -605,63 +603,78 @@ with bar_c1:
 
 with bar_c2:
     if st.session_state["has_run_started"] and st.session_state["is_running"]:
-        if st.session_state["sim_state"] in ["EN_ROUTE_HUB", "SERVICING", "NOMINAL", "FINAL_LEG"]:
-            if st.button("⚡ Inject Surprise Disruption!", type="primary", use_container_width=True):
+        b_c1, b_c2 = st.columns(2)
+        trigger_disruption = False
+        disruption_type = "POWER_OUTAGE"
+
+        with b_c1:
+            if st.button("🎲 Random Anomaly", type="secondary", use_container_width=True):
+                trigger_disruption = True
+                random_anom = random.choice(anomalies_pool)
+                disruption_type = random_anom.get("fault_code", "COMP_ERR_401")
+                st.session_state["active_anomaly"] = random_anom
+
+        with b_c2:
+            if st.button("⚡ Surprise Outage", type="primary", use_container_width=True):
+                trigger_disruption = True
+                disruption_type = "GRID_OUTAGE_805"
                 st.session_state["active_curveball"] = "POWER_OUTAGE"
-                st.session_state["anomaly_count"] = st.session_state.get("anomaly_count", 0) + 1
-                cur_t = st.session_state["current_sim_time"].strftime("%H:%M:%S") if st.session_state.get("current_sim_time") else "T+NOW"
-                
-                st.session_state["incident_history"].append({
-                    "timestamp": cur_t,
-                    "fault": "SURPRISE_POWER_OUTAGE",
-                    "temp_at_event": st.session_state["cur_temp"],
-                    "state": st.session_state["sim_state"]
-                })
-                
-                st.session_state["run_logs"].append(f"[{cur_t}] ⚠️ SURPRISE DISRUPTION INJECTED! (Incident #{st.session_state['anomaly_count']}) Immediate emergency re-plan requested.")
-                
-                route_info = st.session_state["active_route"]
-                cust = st.session_state["active_customer"]
-                sla_key = st.session_state.get("active_anomaly", {}).get("sla_governed", "SLA-COLD-2TO8") if st.session_state["active_anomaly"] else "SLA-COLD-2TO8"
-                
-                cand_hubs = route_info.get("candidate_hubs", [])
-                alt_hubs = [h for h in cand_hubs if h["facility_id"] != (st.session_state["chosen_hub"]["facility_id"] if st.session_state["chosen_hub"] else "")]
-                
-                cust["current_temp"] = st.session_state["cur_temp"]
-                cust["excursion_ceiling"] = 8.0
-                decision = evaluate_facility_compatibility(
-                    cust, {"fault_code": "SURPRISE_DISRUPTION_OUTAGE"}, alt_hubs,
-                    st.session_state["cur_lat"], st.session_state["cur_lon"],
-                    route_info["origin"], route_info["destination"],
-                    current_sim_time=st.session_state.get("current_sim_time"),
-                    sla_deadline=st.session_state.get("sla_deadline_time")
-                )
-                new_hub = decision["best_hub"] if decision["best_hub"] else (alt_hubs[0] if alt_hubs else cand_hubs[0])
-                st.session_state["chosen_hub"] = new_hub
-                
-                active_payload = json.loads(json.dumps(base_telemetry))
-                active_payload["customer_data"] = cust
-                active_payload["governing_sla_id"] = sla_key
-                active_payload["candidate_hubs"] = alt_hubs
-                active_payload["assigned_hub"] = new_hub
-                active_payload["incident_history"] = st.session_state["incident_history"]
-                active_payload["curveball_condition"] = "POWER_OUTAGE"
-                active_payload["incident_event"]["location"]["latitude"] = st.session_state["cur_lat"]
-                active_payload["incident_event"]["location"]["longitude"] = st.session_state["cur_lon"]
-                active_payload["incident_event"]["sensor_readings"]["compressor_status"] = "SURPRISE_DISRUPTION_OUTAGE"
-                active_payload["incident_event"]["sensor_readings"]["cargo_temperature_celsius"] = st.session_state["cur_temp"]
-                
-                replan_res = run_cryoguard_mission(active_payload, is_replan=True)
-                st.session_state["mission_result"] = replan_res
-                
-                detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], new_hub["lat"], new_hub["lon"])
-                st.session_state["detour_road_pts"] = detour_meta["waypoints"]
-                st.session_state["active_leg_pts"] = resample_waypoints(detour_meta["waypoints"], target_count=max(15, int(detour_meta.get("distance_miles", 20))))
-                st.session_state["leg_idx"] = 0
-                st.session_state["service_countdown"] = 14
-                st.session_state["sim_state"] = "EN_ROUTE_HUB"
-                st.session_state["run_logs"].append(f"[{cur_t}] 🔄 Gemini Re-route Dispatched: Diverting to {new_hub['name']} ({detour_meta['distance_miles']} mi).")
-                st.rerun()
+
+        if trigger_disruption:
+            st.session_state["anomaly_count"] = st.session_state.get("anomaly_count", 0) + 1
+            cur_t = st.session_state["current_sim_time"].strftime("%H:%M:%S") if st.session_state.get("current_sim_time") else "T+NOW"
+            
+            st.session_state["incident_history"].append({
+                "timestamp": cur_t,
+                "fault": disruption_type,
+                "temp_at_event": st.session_state["cur_temp"],
+                "state": st.session_state["sim_state"]
+            })
+            
+            st.session_state["run_logs"].append(f"[{cur_t}] ⚠️ DISRUPTION TRIGGERED ({disruption_type})! Incident #{st.session_state['anomaly_count']} logged.")
+            
+            route_info = st.session_state["active_route"]
+            cust = st.session_state["active_customer"]
+            sla_key = st.session_state.get("active_anomaly", {}).get("sla_governed", "SLA-COLD-2TO8") if st.session_state["active_anomaly"] else "SLA-COLD-2TO8"
+            
+            cand_hubs = route_info.get("candidate_hubs", [])
+            alt_hubs = [h for h in cand_hubs if h["facility_id"] != (st.session_state["chosen_hub"]["facility_id"] if st.session_state["chosen_hub"] else "")]
+            
+            cust["current_temp"] = st.session_state["cur_temp"]
+            cust["excursion_ceiling"] = 8.0
+            decision = evaluate_facility_compatibility(
+                cust, {"fault_code": disruption_type}, alt_hubs,
+                st.session_state["cur_lat"], st.session_state["cur_lon"],
+                route_info["origin"], route_info["destination"],
+                current_sim_time=st.session_state.get("current_sim_time"),
+                sla_deadline=st.session_state.get("sla_deadline_time")
+            )
+            new_hub = decision["best_hub"] if decision["best_hub"] else (alt_hubs[0] if alt_hubs else cand_hubs[0])
+            st.session_state["chosen_hub"] = new_hub
+            
+            active_payload = json.loads(json.dumps(base_telemetry))
+            active_payload["customer_data"] = cust
+            active_payload["governing_sla_id"] = sla_key
+            active_payload["candidate_hubs"] = alt_hubs
+            active_payload["assigned_hub"] = new_hub
+            active_payload["incident_history"] = st.session_state["incident_history"]
+            active_payload["curveball_condition"] = disruption_type
+            active_payload["incident_event"]["location"]["latitude"] = st.session_state["cur_lat"]
+            active_payload["incident_event"]["location"]["longitude"] = st.session_state["cur_lon"]
+            active_payload["incident_event"]["sensor_readings"]["compressor_status"] = disruption_type
+            active_payload["incident_event"]["sensor_readings"]["cargo_temperature_celsius"] = st.session_state["cur_temp"]
+            
+            replan_res = run_cryoguard_mission(active_payload, is_replan=True)
+            st.session_state["mission_result"] = replan_res
+            
+            detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], new_hub["lat"], new_hub["lon"])
+            st.session_state["detour_road_pts"] = detour_meta["waypoints"]
+            st.session_state["active_leg_pts"] = resample_waypoints(detour_meta["waypoints"], target_count=max(15, int(detour_meta.get("distance_miles", 20))))
+            st.session_state["leg_idx"] = 0
+            st.session_state["service_countdown"] = 14
+            st.session_state["sim_state"] = "EN_ROUTE_HUB"
+            st.session_state["run_logs"].append(f"[{cur_t}] 🔄 Gemini Autonomous Re-Plan: Diverting to {new_hub['name']} ({detour_meta['distance_miles']} mi).")
+            st.rerun()
 
 # Phase Bar
 if not st.session_state["has_run_started"]:
@@ -800,6 +813,34 @@ tab_unified, tab_deliberation, tab_agent, tab_contract, tab_threat, tab_gxp = st
 ])
 
 with tab_unified:
+    # Live Simulation Setup Context Card
+    if st.session_state["has_run_started"]:
+        c_cust = st.session_state["active_customer"]
+        c_route = st.session_state["active_route"]
+        c_anom = st.session_state["active_anomaly"]
+        anom_name = c_anom.get("name", "Nominal In-Transit Cruise") if c_anom else "Nominal In-Transit Cruise"
+        fault_badge = f"🚨 {c_anom.get('fault_code', 'MONITORING')}" if c_anom else "🟢 NOMINAL"
+        
+        st.markdown(f"""
+        <div style="background: #0f172a; border: 1.5px solid #1e293b; border-radius: 8px; padding: 10px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 1.2fr 1.6fr 1.2fr; gap: 14px; font-size: 0.82rem;">
+            <div>
+                <span style="color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.5px;">🏢 Commercial Sponsor</span><br>
+                <b style="color: #f8fafc; font-size: 0.90rem;">{c_cust.get('customer_name')}</b><br>
+                <span style="color: #38bdf8;">{c_cust.get('drug_product')}</span> (${c_cust.get('valuation_usd', 0):,} USD)
+            </div>
+            <div>
+                <span style="color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.5px;">🛣️ Active Freight Corridor</span><br>
+                <b style="color: #f8fafc;">{c_route.get('corridor_name')[:48]}...</b><br>
+                <span style="color: #94a3b8;">Origin: {c_route['origin']['name'][:22]} ➔ Dest: {c_route['destination']['name'][:22]}</span>
+            </div>
+            <div>
+                <span style="color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.5px;">⚠️ Active Simulation Protocol</span><br>
+                <b style="color: {'#f87171' if c_anom else '#4ade80'};">{anom_name}</b><br>
+                <span style="background: #1e293b; color: #a7f3d0; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-family: monospace;">{fault_badge}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     map_col, log_col = st.columns([1.25, 1.0])
 
     with map_col:
@@ -927,8 +968,8 @@ with tab_unified:
         if not st.session_state["has_run_started"]:
             log_html = '<div class="log-box"><div class="log-line">[--:--:--] ⚪ System in standby. Select customer parameters and click "Launch".</div></div>'
         else:
-            log_html = '<div class="log-box">'
-            for entry in reversed(st.session_state["run_logs"]):
+            log_html = '<div class="log-box" id="telematics-log-box">'
+            for entry in st.session_state["run_logs"]:
                 log_html += f'<div class="log-line">{entry}</div>'
             log_html += '</div>'
         log_col.markdown(log_html, unsafe_allow_html=True)
