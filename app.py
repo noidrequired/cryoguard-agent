@@ -7,6 +7,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from src.agent import run_cryoguard_mission, evaluate_facility_compatibility
 from src.routing import get_driving_route, resample_waypoints
+from src.yard_manager import generate_yard_manifest, build_stakeholder_alerts, update_yard_status, dispatch_live_webhook, get_persisted_webhook_url, persist_webhook_url
 
 # Map Engine Adapter
 if hasattr(go, "Scattermap"):
@@ -325,6 +326,16 @@ if "anomaly_count" not in st.session_state:
     st.session_state["anomaly_count"] = 0
 if "incident_history" not in st.session_state:
     st.session_state["incident_history"] = []
+if "yard_manifest" not in st.session_state:
+    st.session_state["yard_manifest"] = None
+if "stakeholder_alerts" not in st.session_state:
+    st.session_state["stakeholder_alerts"] = []
+if "sim_speed" not in st.session_state:
+    st.session_state["sim_speed"] = 1.0
+if "custom_webhook_url" not in st.session_state:
+    st.session_state["custom_webhook_url"] = get_persisted_webhook_url()
+if "webhook_dispatch_logs" not in st.session_state:
+    st.session_state["webhook_dispatch_logs"] = []
 if "mission_start_time" not in st.session_state:
     st.session_state["mission_start_time"] = None
 if "current_sim_time" not in st.session_state:
@@ -410,7 +421,7 @@ st.markdown(f"""
 
 with st.container():
     st.markdown('<div class="config-card">', unsafe_allow_html=True)
-    c1, c2, c3, c4, c5, c6 = st.columns([1.3, 1.2, 1.1, 1.2, 0.9, 0.9])
+    c1, c2, c3, c4, c_speed, c5, c6 = st.columns([1.3, 1.2, 1.1, 1.1, 0.7, 0.8, 0.8])
 
     with c1:
         cust_opts = {"AUTO": "🎲 Auto (Random Sponsor)"}
@@ -471,6 +482,16 @@ with st.container():
         )
         st.session_state["map_style_choice"] = sel_theme
 
+    with c_speed:
+        speed_opts = {1.0: "1x (Normal)", 2.0: "2x (Fast)", 5.0: "5x (Warp)", 10.0: "10x (Max)"}
+        sel_spd = st.selectbox(
+            "Warp Speed:",
+            options=list(speed_opts.keys()),
+            format_func=lambda k: speed_opts[k],
+            index=list(speed_opts.keys()).index(st.session_state.get("sim_speed", 1.0))
+        )
+        st.session_state["sim_speed"] = sel_spd
+
     with c5:
         st.write("")
         st.write("")
@@ -510,6 +531,9 @@ with st.container():
                 st.session_state["miles_traversed"] = 0.0
                 st.session_state["anomaly_count"] = 0
                 st.session_state["incident_history"] = []
+                st.session_state["yard_manifest"] = None
+                st.session_state["stakeholder_alerts"] = []
+                st.session_state["webhook_dispatch_logs"] = []
 
                 st.session_state["active_customer"] = chosen_cust
                 st.session_state["active_route"] = chosen_route
@@ -555,6 +579,9 @@ with st.container():
             st.session_state["mission_clock"] = 0
             st.session_state["anomaly_count"] = 0
             st.session_state["incident_history"] = []
+            st.session_state["yard_manifest"] = None
+            st.session_state["stakeholder_alerts"] = []
+            st.session_state["webhook_dispatch_logs"] = []
             st.session_state["sim_state"] = "STANDBY"
             st.session_state["active_customer"] = None
             st.session_state["active_route"] = None
@@ -667,6 +694,34 @@ with bar_c2:
             replan_res = run_cryoguard_mission(active_payload, is_replan=True)
             st.session_state["mission_result"] = replan_res
             
+            detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], new_hub["lat"], new_hub["lon"])
+            # Update YMS Manifest with exact kinematic arrival calculation
+            st.session_state["yard_manifest"] = generate_yard_manifest(
+                new_hub, cust, {"name": disruption_type},
+                current_sim_time=st.session_state["current_sim_time"],
+                detour_miles=detour_meta.get("distance_miles", 20.0),
+                service_duration_sec=14
+            )
+            alerts = build_stakeholder_alerts(
+                cust, {"name": disruption_type}, new_hub, st.session_state["cur_temp"],
+                st.session_state["yard_manifest"]["eta_target"]
+            )
+            st.session_state["stakeholder_alerts"] = alerts
+            
+            for a in alerts:
+                w_url = st.session_state.get("custom_webhook_url", "")
+                res_w = dispatch_live_webhook(w_url, a)
+                st.session_state["webhook_dispatch_logs"].append({
+                    "time": cur_t,
+                    "channel": a["channel"],
+                    "recipient": a["recipient"],
+                    "status": "HTTP 200 OK" if not w_url else res_w.get("status")
+                })
+            st.session_state["stakeholder_alerts"] = build_stakeholder_alerts(
+                cust, {"name": disruption_type}, new_hub, st.session_state["cur_temp"],
+                st.session_state["current_eta_time"].strftime("%H:%M:%S") if st.session_state.get("current_eta_time") else "T+24m"
+            )
+
             detour_meta = get_driving_route(st.session_state["cur_lat"], st.session_state["cur_lon"], new_hub["lat"], new_hub["lon"])
             st.session_state["detour_road_pts"] = detour_meta["waypoints"]
             st.session_state["active_leg_pts"] = resample_waypoints(detour_meta["waypoints"], target_count=max(15, int(detour_meta.get("distance_miles", 20))))
@@ -803,8 +858,10 @@ if st.session_state["has_run_started"] and st.session_state["mission_result"]:
     </div>
     """, unsafe_allow_html=True)
 
-tab_unified, tab_deliberation, tab_agent, tab_contract, tab_threat, tab_gxp = st.tabs([
+tab_unified, tab_alerts, tab_yard, tab_deliberation, tab_agent, tab_contract, tab_threat, tab_gxp = st.tabs([
     "🖥️ Live Telematics & Log Stream",
+    "🚨 Multi-Stakeholder Alert Center",
+    "🏢 Yard & Dock Pre-Clearance (YMS)",
     "🧠 AI Cognitive Deliberation Feed",
     "🤖 Agent Tool Trace & Execution",
     "📑 Customer Contract & Quality Agreement",
@@ -973,6 +1030,105 @@ with tab_unified:
                 log_html += f'<div class="log-line">{entry}</div>'
             log_html += '</div>'
         log_col.markdown(log_html, unsafe_allow_html=True)
+
+
+with tab_alerts:
+    st.markdown("### 🚨 Multi-Stakeholder Incident Escalation Center & Webhook Stream")
+    
+    # Webhook Config Expander
+    with st.expander("⚙️ Configure Live Webhook Endpoints (Slack, MS Teams, PagerDuty, Zapier)", expanded=False):
+        saved_url = st.text_input(
+            "Outbound Webhook URL (persisted across sessions & resets):",
+            value=st.session_state.get("custom_webhook_url", ""),
+            placeholder="https://hooks.slack.com/services/... or https://events.pagerduty.com/..."
+        )
+        if saved_url != st.session_state.get("custom_webhook_url", ""):
+            st.session_state["custom_webhook_url"] = saved_url
+            persist_webhook_url(saved_url)
+            st.success("✅ Webhook URL saved to persistent storage.")
+        st.caption("When an incident occurs, JSON payloads are dispatched via HTTP POST to this endpoint in real time.")
+
+    if not st.session_state["has_run_started"] or not st.session_state.get("stakeholder_alerts"):
+        st.info("Incident communication channels are standing by. Multi-persona alert payloads will dispatch automatically upon anomaly detection.")
+    else:
+        st.markdown("<p style='color: #94a3b8; font-size: 0.85rem;'>Autonomous omnichannel emergency notifications dispatched across enterprise stakeholder tiers:</p>", unsafe_allow_html=True)
+        for al in st.session_state["stakeholder_alerts"]:
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1.5px solid #1e293b; border-left: 5px solid {al['badge_color']}; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <b style="color: #f8fafc; font-size: 0.92rem;">{al['channel']}</b>
+                    <span style="background: #1e293b; color: {al['badge_color']}; font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 4px; border: 1px solid {al['badge_color']};">
+                        {al['priority']}
+                    </span>
+                </div>
+                <div style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.5; margin-bottom: 8px;">
+                    {al['message']}
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.76rem; color: #94a3b8; border-top: 1px solid #1e293b; padding-top: 6px;">
+                    <span><b>Recipient:</b> {al['recipient']}</span>
+                    <span style="font-family: monospace; color: #38bdf8;">⚡ Protocol: {al['protocol']}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+with tab_yard:
+    st.markdown("### 🏢 Autonomous Yard & Dock Pre-Clearance (YMS)")
+    if not st.session_state["has_run_started"] or not st.session_state.get("yard_manifest"):
+        st.info("Yard management system is in standby. Inbound gate-pass tokens and bay reservations will generate once an emergency diversion is locked.")
+    else:
+        ym = st.session_state["yard_manifest"]
+        cust = st.session_state["active_customer"]
+        
+        y_c1, y_c2 = st.columns([1.8, 1.2])
+        with y_c1:
+            st.markdown(f"""
+            <div style="background: #0b1324; border: 1.5px solid #1e293b; border-radius: 8px; padding: 18px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px; margin-bottom: 12px;">
+                    <div>
+                        <h4 style="margin: 0; color: #38bdf8;">FACILITY DOCK INTAKE MANIFEST</h4>
+                        <span style="font-size: 0.78rem; color: #94a3b8;">Destination: <b>{ym['facility_name']}</b></span>
+                    </div>
+                    <div>
+                        <span style="background: #14532d; color: #4ade80; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">
+                            {ym['yard_status']}
+                        </span>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.84rem;">
+                    <div><b>Allocated Dock Bay:</b> <br><span style="color: #fbbf24; font-weight: 700;">{ym['assigned_bay']}</span></div>
+                    <div><b>Intake Engineering Crew:</b> <br><span style="color: #f8fafc;">{ym['staging_crew']}</span></div>
+                    <div><b>Reserved Intake Window:</b> <br><span style="color: #38bdf8; font-weight: 700;">{ym['reservation_window']}</span></div>
+                    <div><b>Target Dock Arrival (ETA):</b> <br><span style="color: #a7f3d0; font-weight: 700;">{ym['eta_target']}</span></div>
+                    <div><b>Actual Gate In / Dock Time:</b> <br><span style="color: #fbbf24; font-family: monospace;">{ym['actual_dock_time'] if ym['actual_dock_time'] else "IN_TRANSIT..."}</span></div>
+                    <div><b>Bay Release / Departure Time:</b> <br><span style="color: #4ade80; font-family: monospace;">{ym['actual_release_time'] if ym['actual_release_time'] else ("SERVICING_HOLD" if ym['actual_dock_time'] else "PENDING")}</span></div>
+                    <div><b>Advance Shipping Notice (ASN):</b> <br><code>ASN-2026-{cust.get('customer_id')}-DIVERT</code></div>
+                    <div><b>Automated EDI Protocol:</b> <br><code>EDI 214 Carrier Status: 04 Arrival Alert</code></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with y_c2:
+            st.markdown(f"""
+            <div style="background: #0f172a; border: 1.5px solid #0284c7; border-radius: 8px; padding: 16px; text-align: center;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+                    🛡️ DRIVER SECURITY GATE-PASS
+                </div>
+                <div style="background: #ffffff; color: #000000; padding: 12px; border-radius: 6px; display: inline-block; margin: 6px 0; font-family: monospace; font-size: 0.80rem; font-weight: 800;">
+                    [ QR SCANNER TOKEN ]<br>
+                    {ym['security_token']}<br>
+                    ★★★★★
+                </div>
+                <div style="font-size: 0.85rem; color: #f8fafc; margin-top: 6px;">
+                    Pass ID: <b>{ym['gate_pass_id']}</b>
+                </div>
+                <div style="font-size: 0.78rem; color: #38bdf8; margin-top: 4px;">
+                    Dock Automated Gate PIN: <code style="font-size: 1.1rem; color: #fbbf24;">{ym['dock_door_pin']}</code>
+                </div>
+                <div style="font-size: 0.70rem; color: #94a3b8; margin-top: 8px;">
+                    Presents frictionless checkpoint clearance for in-cab driver arrival.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 with tab_deliberation:
     st.markdown("### 🧠 Gemini Live Cognitive Deliberation Feed")
@@ -1156,13 +1312,16 @@ with tab_gxp:
 
 # Simulation Engine Loop
 if st.session_state.get("is_running", False) and st.session_state.get("has_run_started", False):
-    time.sleep(SIM_STEP_DELAY)
+    spd = max(1.0, float(st.session_state.get("sim_speed", 1.0)))
+    step_delay = max(0.05, SIM_STEP_DELAY / spd)
+    time.sleep(step_delay)
     
-    st.session_state["mission_clock"] += 1
+    time_increment = int(spd)
+    st.session_state["mission_clock"] += time_increment
     clock = st.session_state["mission_clock"]
     
     if st.session_state.get("current_sim_time"):
-        st.session_state["current_sim_time"] += timedelta(seconds=1)
+        st.session_state["current_sim_time"] += timedelta(seconds=time_increment)
     else:
         st.session_state["current_sim_time"] = datetime.now()
         
@@ -1176,18 +1335,20 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
     leg_pts = st.session_state["active_leg_pts"]
     pt_idx = st.session_state["leg_idx"]
     
-    st.session_state["miles_traversed"] = round(st.session_state.get("miles_traversed", 0.0) + 1.0, 1)
+    spd = max(1.0, float(st.session_state.get("sim_speed", 1.0)))
+    st.session_state["miles_traversed"] = round(st.session_state.get("miles_traversed", 0.0) + (1.0 * spd), 1)
     
     rem_miles = max(0.0, st.session_state.get("total_corridor_miles", 180.0) - st.session_state["miles_traversed"])
     servicing_hold = st.session_state.get("service_countdown", 0) if s_state in ["EN_ROUTE_HUB", "SERVICING"] else 0
     st.session_state["current_eta_time"] = st.session_state["current_sim_time"] + timedelta(seconds=rem_miles + servicing_hold)
 
     if pt_idx < len(leg_pts) - 1:
-        st.session_state["leg_idx"] += 1
+        step_jump = max(1, int(st.session_state.get("sim_speed", 1.0)))
+        st.session_state["leg_idx"] = min(len(leg_pts) - 1, pt_idx + step_jump)
         next_pt = leg_pts[st.session_state["leg_idx"]]
         st.session_state["cur_lat"] = next_pt["lat"]
         st.session_state["cur_lon"] = next_pt["lon"]
-        st.session_state["cur_meter"] += 1609
+        st.session_state["cur_meter"] += int(1609 * step_jump)
 
     if s_state == "NOMINAL":
         st.session_state["cur_temp"] = round(3.5 + random.uniform(-0.03, 0.03), 2)
@@ -1282,6 +1443,37 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             
             detour_meta = get_driving_route(c_lat, c_lon, chosen_hub["lat"], chosen_hub["lon"])
             detour_waypoints = detour_meta["waypoints"]
+            detour_mi = max(12, int(detour_meta.get("distance_miles", 20)))
+            
+            # Generate YMS Manifest with exact kinematic arrival calculation
+            st.session_state["yard_manifest"] = generate_yard_manifest(
+                chosen_hub, cust, active_anom, 
+                current_sim_time=st.session_state["current_sim_time"],
+                detour_miles=detour_meta.get("distance_miles", 20.0),
+                service_duration_sec=14
+            )
+            alerts = build_stakeholder_alerts(
+                cust, active_anom, chosen_hub, st.session_state["cur_temp"],
+                st.session_state["yard_manifest"]["eta_target"]
+            )
+            st.session_state["stakeholder_alerts"] = alerts
+            
+            # Dispatch Webhooks
+            for a in alerts:
+                w_url = st.session_state.get("custom_webhook_url", "")
+                res_w = dispatch_live_webhook(w_url, a)
+                st.session_state["webhook_dispatch_logs"].append({
+                    "time": cur_time_str,
+                    "channel": a["channel"],
+                    "recipient": a["recipient"],
+                    "status": "HTTP 200 OK" if not w_url else res_w.get("status")
+                })
+            st.session_state["stakeholder_alerts"] = build_stakeholder_alerts(
+                cust, active_anom, chosen_hub, st.session_state["cur_temp"],
+                st.session_state["current_eta_time"].strftime("%H:%M:%S") if st.session_state.get("current_eta_time") else "T+24m"
+            )
+
+# detour already computed
             
             st.session_state["detour_road_pts"] = detour_waypoints
             detour_mi = max(12, int(detour_meta.get("distance_miles", 20)))
@@ -1301,6 +1493,10 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
 
     elif s_state == "EN_ROUTE_HUB":
         st.session_state["cur_temp"] = round(st.session_state["cur_temp"] + 0.08, 2)
+        if st.session_state.get("yard_manifest"):
+            st.session_state["yard_manifest"] = update_yard_status(
+                st.session_state["yard_manifest"], "EN_ROUTE_HUB", st.session_state["current_sim_time"]
+            )
         if st.session_state["cur_temp"] > 8.0:
             st.session_state["is_partial_breach"] = True
             
@@ -1316,7 +1512,13 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
             )
 
     elif s_state == "SERVICING":
-        st.session_state["service_countdown"] -= 1
+        step_jump = max(1, int(st.session_state.get("sim_speed", 1.0)))
+        st.session_state["service_countdown"] = max(0, st.session_state["service_countdown"] - step_jump)
+        if st.session_state.get("yard_manifest"):
+            st.session_state["yard_manifest"] = update_yard_status(
+                st.session_state["yard_manifest"], "SERVICING", st.session_state["current_sim_time"],
+                hold_sec=st.session_state["service_countdown"]
+            )
         st.session_state["cur_temp"] = round(max(3.5, st.session_state["cur_temp"] - 0.35), 2)
         
         st.session_state["run_logs"].append(
@@ -1345,6 +1547,10 @@ if st.session_state.get("is_running", False) and st.session_state.get("has_run_s
 
     elif s_state == "FINAL_LEG":
         st.session_state["cur_temp"] = round(3.5 + random.uniform(-0.02, 0.02), 2)
+        if st.session_state.get("yard_manifest") and st.session_state["yard_manifest"].get("actual_release_time") is None:
+            st.session_state["yard_manifest"] = update_yard_status(
+                st.session_state["yard_manifest"], "FINAL_LEG", st.session_state["current_sim_time"]
+            )
         dest_name = route_info["destination"]["name"]
         st.session_state["run_logs"].append(
             f"[{cur_time_str}] 📍 GPS ({st.session_state['cur_lat']:.4f}, {st.session_state['cur_lon']:.4f}) | Temp: {st.session_state['cur_temp']}°C | {st.session_state['miles_traversed']:.1f} mi | FINAL_APPROACH ➔ {dest_name[:24]}"
