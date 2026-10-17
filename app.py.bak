@@ -20,7 +20,7 @@ else:
     MapTrace = getattr(go, "Scattermapbox", go.Scatter)
     IS_SCATTERMAP = False
 
-def apply_map_camera(fig, style_name, camera_bounds, height=480, uirevision=None):
+def apply_map_camera(fig, style_name, camera_bounds, height=480, uirevision="cryoguard_camera_lock"):
     layout_dict = {
         "margin": dict(l=0, r=0, t=0, b=0),
         "height": height,
