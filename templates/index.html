@@ -19,9 +19,6 @@
           fontFamily: {
             sans: ['Plus Jakarta Sans', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: { cyan: '#38bdf8', emerald: '#10b981', amber: '#f59e0b', rose: '#f43f5e' }
           }
         }
       }
@@ -35,8 +32,6 @@
   
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.25s, color 0.25s; }
-    
-    /* Dark Theme */
     .dark body { background-color: #060a12; color: #f8fafc; }
     .dark .tower-panel { background: #0c121e; border: 1px solid #1e293b; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.5); }
     .dark .tower-card { background: #080d16; border: 1px solid #1e293b; color: #f8fafc; }
@@ -45,8 +40,8 @@
     .dark .text-adaptive-body { color: #cbd5e1; }
     .dark .text-adaptive-muted { color: #64748b; }
     .dark .card-highlight { background: #0b1324; border: 1px solid #1e293b; }
+    .dark .map-dark-filter .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%); }
 
-    /* Light Theme (Low-glare slate, dark contrast typography) */
     .light body { background-color: #e2e8f0; color: #0f172a; }
     .light .tower-panel { background: #f1f5f9; border: 1px solid #cbd5e1; box-shadow: 0 4px 16px -2px rgba(15,23,42,0.06); }
     .light .tower-card { background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; }
@@ -57,15 +52,12 @@
     .light .card-highlight { background: #e6edf5; border: 1px solid #cbd5e1; }
 
     #map { height: 490px; width: 100%; border-radius: 8px; z-index: 10; }
-    
     .carrier-marker-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
     .carrier-ping-ring { position: absolute; width: 34px; height: 34px; border-radius: 50%; pointer-events: none; animation: radarPing 2s linear infinite; }
     .carrier-core-dot { position: relative; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #ffffff; box-shadow: 0 0 12px rgba(56, 189, 248, 0.9); z-index: 20; }
-    
-    @keyframes radarPing {
-      0% { transform: scale(0.6); opacity: 0.9; }
-      100% { transform: scale(2.6); opacity: 0; }
-    }
+    @keyframes radarPing { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.6); opacity: 0; } }
+    @keyframes sirenStrobe { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.15); } }
+    .siren-beacon-active { animation: sirenStrobe 0.8s ease-in-out infinite; }
 
     .phase-step { flex: 1; padding: 8px 6px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; text-align: center; border: 1px solid; }
     .phase-idle { background: transparent; color: #64748b; border-color: #334155; }
@@ -76,7 +68,66 @@
 </head>
 <body class="p-3 md:p-4 space-y-3">
 
-  <!-- Command Tower Top Bar -->
+  <!-- AUTHENTICATION GATEWAY -->
+  <div id="authModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+    <div class="tower-panel rounded-2xl max-w-md w-full p-7 space-y-5 border border-sky-500/40 shadow-2xl">
+      <div class="flex items-center space-x-3 border-b border-slate-700/60 pb-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-extrabold text-adaptive-head tracking-tight">CryoGuard AI™</h2>
+          <span class="text-xs text-sky-500 dark:text-sky-400 font-mono font-semibold">SECURE OPERATIONS GATEWAY</span>
+        </div>
+      </div>
+
+      <div id="authErrorMsg" class="hidden p-3 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-500 text-xs font-semibold"></div>
+
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-adaptive-muted mb-1">OPERATOR WORK EMAIL</label>
+          <input id="loginEmail" type="email" required placeholder="operator@domain.com" class="w-full tower-card rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-adaptive-muted mb-1">ACCESS PASSWORD</label>
+          <input id="loginPass" type="password" required placeholder="••••••••••••" class="w-full tower-card rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none">
+        </div>
+
+        <button id="btnLoginSubmit" type="submit" class="w-full py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-2 cursor-pointer">
+          <i data-lucide="key" class="w-4 h-4"></i>
+          <span id="btnLoginText">Authenticate & Enter Tower</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Incident Siren Alert Banner -->
+  <div id="sirenEmergencyBanner" class="hidden rounded-xl p-3 bg-gradient-to-r from-rose-900/90 via-red-800/90 to-rose-900/90 border border-rose-500 text-white flex items-center justify-between shadow-xl">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-rose-600 rounded-lg siren-beacon-active">
+        <i data-lucide="siren" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="font-extrabold tracking-wider text-sm font-mono uppercase text-red-200">CRITICAL TELEMETRICS ALARM</span>
+          <span id="sirenFaultTag" class="px-2 py-0.5 rounded bg-black/40 font-mono text-xs font-bold text-yellow-300">GRID_OUTAGE_805</span>
+        </div>
+        <p id="sirenEmergencyMsg" class="text-xs text-slate-100 font-medium">Autonomous recovery active: Facility infrastructure compromised.</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="toggleSirenAudio()" id="btnMuteSiren" class="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition flex items-center space-x-1 cursor-pointer">
+        <i id="muteIcon" data-lucide="volume-2" class="w-4 h-4"></i>
+        <span id="muteText">Mute Audio</span>
+      </button>
+      <button onclick="dismissSirenBanner()" class="p-1.5 hover:bg-white/20 rounded-lg transition cursor-pointer" title="Acknowledge">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Header -->
   <header class="tower-panel rounded-xl px-5 py-3 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white">
@@ -90,22 +141,34 @@
         <span class="text-xs text-adaptive-muted font-medium">Multi-Customer Cold Chain Telematics & Autonomous SLA Risk Defense</span>
       </div>
     </div>
+    
     <div class="flex items-center gap-3">
       <div id="corridorBadge" class="tower-card text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 text-sky-500 dark:text-sky-400 border-sky-500/30">
         <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
         <span>SYSTEM STANDBY (AWAITING LAUNCH)</span>
       </div>
-      <button onclick="toggleTheme()" class="p-2 tower-card rounded-lg hover:border-sky-500 transition" title="Toggle Theme">
+
+      <div class="hidden md:flex items-center space-x-2 text-xs tower-card px-3 py-1.5 rounded-lg">
+        <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-500"></i>
+        <span id="headerOperatorName" class="font-bold text-adaptive-head">Chief Dispatcher</span>
+      </div>
+
+      <button onclick="toggleTheme()" class="p-2 tower-card rounded-lg hover:border-sky-500 transition cursor-pointer" title="Toggle Theme">
         <i id="themeIcon" data-lucide="sun" class="w-4 h-4 text-sky-500 dark:text-sky-400"></i>
       </button>
-      <button onclick="openSettingsModal()" class="px-3 py-2 tower-card rounded-lg hover:border-sky-500 transition flex items-center gap-1.5 text-xs font-bold" title="Settings">
-        <i data-lucide="settings" class="w-4 h-4 text-sky-400"></i>
+
+      <button onclick="openSettingsModal()" class="px-3 py-2 tower-card rounded-lg hover:border-sky-500 transition flex items-center gap-1.5 text-xs font-bold cursor-pointer" title="Settings">
+        <i data-lucide="settings" class="w-4 h-4 text-sky-500 dark:text-sky-400"></i>
         <span>Settings</span>
+      </button>
+
+      <button onclick="handleLogout()" class="p-2 tower-card hover:bg-rose-500/10 hover:border-rose-500 rounded-lg text-rose-500 transition cursor-pointer" title="Sign Out">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
       </button>
     </div>
   </header>
 
-  <!-- Flight Deck Configuration Bar (Toggle Launch <-> Stop) -->
+  <!-- Flight Deck Configuration Bar -->
   <div class="tower-panel rounded-xl p-3 grid grid-cols-1 md:grid-cols-7 gap-3 text-xs">
     <div class="md:col-span-2">
       <label class="block font-bold text-adaptive-muted mb-1 flex items-center gap-1"><i data-lucide="box" class="w-3.5 h-3.5 text-sky-500"></i> SPONSOR & CARGO</label>
@@ -135,12 +198,11 @@
       </select>
     </div>
     <div class="flex items-end gap-1.5">
-      <!-- Dynamic Toggle Button: Launch / Stop -->
-      <button id="btnPrimaryAction" onclick="toggleMissionPlayback()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded transition flex items-center justify-center gap-1 shadow-md shadow-sky-600/30">
+      <button id="btnPrimaryAction" onclick="toggleMissionPlayback()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded transition flex items-center justify-center gap-1 shadow-md shadow-sky-600/30 cursor-pointer">
         <i id="primaryActionIcon" data-lucide="play" class="w-3.5 h-3.5"></i>
         <span id="primaryActionText">Launch</span>
       </button>
-      <button onclick="resetMission()" class="tower-card hover:border-slate-500 font-bold px-3 py-2 rounded transition flex items-center justify-center" title="Reset All">
+      <button onclick="resetMission()" class="tower-card hover:border-slate-500 font-bold px-3 py-2 rounded transition flex items-center justify-center cursor-pointer" title="Reset All">
         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
       </button>
     </div>
@@ -165,17 +227,17 @@
     </div>
   </div>
 
-  <!-- Live Clock & Dual Injection Bar (Active anytime during run) -->
+  <!-- Live Clock & Dual Injection Bar -->
   <div class="tower-panel rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
     <div class="flex items-center gap-3">
       <span class="text-sm font-extrabold text-sky-500 dark:text-sky-400 font-mono tracking-tight" id="hudClock">🕒 Live Clock: --:--:--</span>
       <span class="text-adaptive-muted font-medium" id="hudTimes">(Departure: <b>--:--:--</b> | Arrival ETA: <b>--:--:--</b>)</span>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="triggerFault()" class="tower-card hover:border-sky-500 font-bold px-3 py-1.5 rounded transition flex items-center gap-1">
+      <button onclick="triggerFault()" class="tower-card hover:border-sky-500 font-bold px-3 py-1.5 rounded transition flex items-center gap-1 cursor-pointer">
         <i data-lucide="shuffle" class="w-3.5 h-3.5 text-amber-500"></i> Random Anomaly
       </button>
-      <button onclick="triggerSurprise()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-md shadow-rose-700/20">
+      <button onclick="triggerSurprise()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-md shadow-rose-700/20 cursor-pointer">
         <i data-lucide="flame" class="w-3.5 h-3.5"></i> Surprise Outage
       </button>
     </div>
@@ -228,13 +290,13 @@
 
   <!-- Operational Tab Selectors -->
   <div class="border-b border-slate-800/80 flex gap-2 overflow-x-auto text-xs font-bold pt-1">
-    <button onclick="switchTab(0)" class="tab-btn px-4 py-2 rounded-t tower-panel border-b-0 text-sky-500 dark:text-sky-400 flex items-center gap-1.5"><i data-lucide="map" class="w-4 h-4"></i> Live Map</button>
-    <button onclick="switchTab(1)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5"><i data-lucide="bell" class="w-4 h-4"></i> Stakeholder Alerts</button>
-    <button onclick="switchTab(2)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5"><i data-lucide="warehouse" class="w-4 h-4"></i> Yard Dock (YMS)</button>
-    <button onclick="switchTab(3)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5"><i data-lucide="brain" class="w-4 h-4"></i> AI Deliberation</button>
-    <button onclick="switchTab(4)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5"><i data-lucide="activity" class="w-4 h-4"></i> Tool Trace</button>
-    <button onclick="switchTab(5)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> Quality Agreement</button>
-    <button onclick="switchTab(6)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5"><i data-lucide="award" class="w-4 h-4"></i> GxP 21 CFR Part 11</button>
+    <button onclick="switchTab(0)" class="tab-btn px-4 py-2 rounded-t tower-panel border-b-0 text-sky-500 dark:text-sky-400 flex items-center gap-1.5 cursor-pointer"><i data-lucide="map" class="w-4 h-4"></i> Live Map</button>
+    <button onclick="switchTab(1)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 cursor-pointer"><i data-lucide="bell" class="w-4 h-4"></i> Stakeholder Alerts</button>
+    <button onclick="switchTab(2)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 cursor-pointer"><i data-lucide="warehouse" class="w-4 h-4"></i> Yard Dock (YMS)</button>
+    <button onclick="switchTab(3)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 cursor-pointer"><i data-lucide="brain" class="w-4 h-4"></i> AI Deliberation</button>
+    <button onclick="switchTab(4)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 cursor-pointer"><i data-lucide="activity" class="w-4 h-4"></i> Tool Trace</button>
+    <button onclick="switchTab(5)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 cursor-pointer"><i data-lucide="file-text" class="w-4 h-4"></i> Quality Agreement</button>
+    <button onclick="switchTab(6)" class="tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 cursor-pointer"><i data-lucide="award" class="w-4 h-4"></i> GxP 21 CFR Part 11</button>
   </div>
 
   <!-- Tab 0: Map & Live Stream -->
@@ -245,14 +307,11 @@
           <span class="font-bold flex items-center gap-1 text-adaptive-head"><i data-lucide="navigation" class="w-3.5 h-3.5 text-sky-500"></i> Closed-Loop Telematics Interstate View</span>
           <span id="coordBadge" class="font-mono text-emerald-500 dark:text-emerald-400 text-[11px] font-bold">GPS: (--, --)</span>
         </div>
-        <!-- Multi-Map View Selector -->
         <div class="flex items-center gap-1">
           <label class="text-[10px] font-bold text-adaptive-muted">MAP VIEW:</label>
           <select id="selMapLayer" onchange="changeMapBaseLayer(this.value)" class="tower-card text-[11px] rounded px-2 py-1 font-medium">
-            <option value="carto-dark">🌌 Carto Dark Matter</option>
             <option value="osm-standard">🛣️ OpenStreetMap Street</option>
             <option value="esri-satellite">🛰️ Satellite Recon</option>
-            <option value="carto-positron">🗺️ Clean Logistics (Positron)</option>
           </select>
         </div>
       </div>
@@ -270,73 +329,70 @@
     </div>
   </div>
 
-  <!-- Tab 1: Stakeholder Alerts (Legible in Light & Dark) -->
+  <!-- Tab 1: Stakeholder Alerts -->
   <div id="tab1" class="tab-content hidden tower-panel rounded-xl p-5 space-y-3">
     <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
       <h3 class="text-sm font-bold flex items-center gap-2 text-adaptive-head"><i data-lucide="send" class="w-4 h-4 text-sky-500"></i> Autonomous Omnichannel Multi-Stakeholder Escalations</h3>
       <span class="text-xs text-adaptive-muted font-mono">Real-time webhook dispatches</span>
     </div>
     <div id="alertsContainer" class="space-y-3">
-      <div class="text-adaptive-muted text-xs font-medium">Incident communication channels are standing by. Multi-persona alert payloads will dispatch automatically upon anomaly detection.</div>
+      <div class="text-adaptive-muted text-xs font-medium">Incident communication channels are standing by.</div>
     </div>
   </div>
 
-  <!-- Tab 2: Yard Management (YMS) with Horizontal Status Badges -->
+  <!-- Tab 2: Yard Management (YMS) -->
   <div id="tab2" class="tab-content hidden tower-panel rounded-xl p-5">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="md:col-span-2 space-y-4">
         <h4 class="text-sm font-bold text-sky-500 dark:text-sky-400 border-b border-slate-700/60 pb-2 flex items-center gap-2">
           <i data-lucide="warehouse" class="w-4 h-4"></i> FACILITY DOCK INTAKE MANIFEST
         </h4>
-        
-        <!-- Horizontal Yard Status Display Bar -->
         <div class="card-highlight rounded-lg p-3 flex items-center justify-between text-xs">
           <span class="font-bold text-adaptive-head uppercase tracking-wider">Yard Status:</span>
-          <span id="ymStatusBadge" class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold px-3 py-1 rounded text-xs">
-            STANDBY
+          <span id="ymStatusBadge" class="bg-slate-800 text-slate-400 font-mono font-bold px-3 py-1 rounded text-xs">
+            NO ACTIVE DOCK RESERVATION
           </span>
         </div>
-
         <div id="ymDetails" class="grid grid-cols-2 gap-4 text-xs font-medium">
-          <div><b class="text-adaptive-head">Assigned Dock Bay:</b><br><span id="ymBay" class="text-amber-500 font-bold">Bay #04 (Cryogenic Liquid N2 Quick-Dock)</span></div>
-          <div><b class="text-adaptive-head">Intake Engineering Crew:</b><br><span id="ymCrew" class="text-adaptive-body">Team Alpha - Certified Cryo Technicians</span></div>
-          <div><b class="text-adaptive-head">Reserved Intake Window:</b><br><span id="ymWindow" class="text-sky-500 dark:text-sky-400 font-bold">T+02:00 - T+16:00</span></div>
-          <div><b class="text-adaptive-head">Target Dock Arrival (ETA):</b><br><span id="ymEta" class="font-mono text-emerald-600 dark:text-emerald-400 font-bold">--:--:--</span></div>
-          <div class="col-span-2"><b class="text-adaptive-head">Consumable Allocation:</b><br><span id="ymConsumable" class="text-adaptive-body">Liquid Nitrogen (LN2) 180L High-Pressure Manifold</span></div>
+          <div><b class="text-adaptive-head">Assigned Dock Bay:</b><br><span id="ymBay" class="text-adaptive-muted">--</span></div>
+          <div><b class="text-adaptive-head">Intake Engineering Crew:</b><br><span id="ymCrew" class="text-adaptive-muted">--</span></div>
+          <div><b class="text-adaptive-head">Reserved Intake Window:</b><br><span id="ymWindow" class="text-adaptive-muted">--</span></div>
+          <div><b class="text-adaptive-head">Target Dock Arrival (ETA):</b><br><span id="ymEta" class="font-mono text-adaptive-muted">--</span></div>
+          <div class="col-span-2"><b class="text-adaptive-head">Consumable Allocation:</b><br><span id="ymConsumable" class="text-adaptive-muted">Awaiting autonomous hub diversion decision</span></div>
         </div>
       </div>
-      
       <div class="border border-sky-500/40 tower-card p-5 rounded-xl text-center space-y-3 flex flex-col items-center justify-center">
         <div class="text-xs font-bold text-adaptive-muted flex items-center gap-1"><i data-lucide="qr-code" class="w-4 h-4 text-sky-500"></i> DRIVER SECURITY GATE-PASS</div>
-        <div id="qrcodeBox" class="p-2.5 bg-white rounded-lg flex items-center justify-center min-w-[130px] min-h-[130px] shadow-md"></div>
-        <div class="text-xs font-mono font-bold text-adaptive-head">Token: <span id="ymToken" class="text-sky-500 dark:text-sky-400">STANDBY</span></div>
-        <div class="text-xs text-amber-500 font-mono font-bold">Dock PIN: <span id="ymPin">----</span></div>
+        <div id="qrcodeBox" class="p-2.5 bg-slate-900/50 border border-slate-800 rounded-lg flex items-center justify-center min-w-[130px] min-h-[130px] text-adaptive-muted text-[11px] font-mono">
+          NO PASS ISSUED
+        </div>
+        <div class="text-xs font-mono font-bold text-adaptive-head">Token: <span id="ymToken" class="text-adaptive-muted">--</span></div>
+        <div class="text-xs text-adaptive-muted font-mono font-bold">Dock PIN: <span id="ymPin">----</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Tab 3: AI Cognitive Deliberation (Fully Visible in Light & Dark Mode) -->
+  <!-- Tab 3: Deliberation -->
   <div id="tab3" class="tab-content hidden tower-panel rounded-xl p-5 space-y-3">
     <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
       <h3 class="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4"></i> Autonomous Triage & Reasoning Feed</h3>
-      <span class="text-xs text-adaptive-muted font-mono">Multi-Turn Deliberation Monologue</span>
     </div>
     <div id="deliberationCards" class="space-y-3 text-xs">
-      <div class="text-adaptive-muted font-medium">The agent's multi-turn inner monologue will populate here as soon as an anomaly triggers.</div>
+      <div class="text-adaptive-muted font-medium">The agent's multi-turn inner monologue will populate here upon anomaly trigger.</div>
     </div>
   </div>
 
-  <!-- Tab 4: Agent Tool Trace -->
+  <!-- Tab 4: Tool Trace -->
   <div id="tab4" class="tab-content hidden tower-panel rounded-xl p-5 space-y-3">
     <h3 class="text-sm font-bold text-sky-500 dark:text-sky-400 border-b border-slate-700/60 pb-2 flex items-center gap-2">
       <i data-lucide="cpu" class="w-4 h-4"></i> Autonomous Agent Tool Execution Trace
     </h3>
     <div id="toolTraceContainer" class="space-y-2.5 text-xs font-medium">
-      <div class="text-adaptive-muted">Autonomous agent in standby monitoring mode. Anomaly detection pending...</div>
+      <div class="text-adaptive-muted">Autonomous agent in standby monitoring mode.</div>
     </div>
   </div>
 
-  <!-- Tab 5: Quality Agreement & Document Viewer -->
+  <!-- Tab 5: QA -->
   <div id="tab5" class="tab-content hidden tower-panel rounded-xl p-5 space-y-4">
     <h3 class="text-sm font-bold border-b border-slate-700/60 pb-2 flex items-center gap-2 text-adaptive-head">
       <i data-lucide="shield" class="w-4 h-4 text-sky-500"></i> Active Sponsor Profile & Governing Quality Agreement (Q-AGR)
@@ -355,19 +411,12 @@
         <div><b class="text-adaptive-head">Delay Liquidated Damages:</b> <span id="qaDamages" class="text-amber-500 font-bold">--</span></div>
       </div>
     </div>
-
-    <!-- Verified Digital Contract Viewer -->
     <div class="tower-card rounded-lg p-4 font-mono text-[11px] leading-relaxed max-h-[300px] overflow-y-auto space-y-2 border-t-2 border-sky-500 text-adaptive-body">
-      <div class="text-center font-bold border-b border-slate-700/60 pb-2 text-xs text-adaptive-head">
-        QUALITY & CLINICAL DISTRIBUTION AGREEMENT (SCHEDULE B)
-      </div>
-      <div id="contractDocumentText" class="whitespace-pre-wrap">
-Select a sponsor and corridor, then launch the mission to load the verified digital quality contract.
-      </div>
+      <div id="contractDocumentText" class="whitespace-pre-wrap">Select a sponsor and corridor, then launch the mission to load the verified digital quality contract.</div>
     </div>
   </div>
 
-  <!-- Tab 6: GxP Audit -->
+  <!-- Tab 6: GxP -->
   <div id="tab6" class="tab-content hidden tower-panel rounded-xl p-5 space-y-3">
     <div class="border-2 border-sky-600 tower-card p-5 rounded-xl space-y-3">
       <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
@@ -388,37 +437,34 @@ Select a sponsor and corridor, then launch the mission to load the verified digi
     </div>
   </div>
 
-  <!-- Settings Modal (Webhooks) -->
+  <!-- Settings Modal -->
   <div id="settingsModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="tower-panel rounded-xl max-w-xl w-full p-6 space-y-4 border border-sky-500/50 shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
         <h3 class="text-base font-bold flex items-center gap-2 text-adaptive-head"><i data-lucide="settings" class="w-5 h-5 text-sky-500"></i> Control Tower Webhook Integrations</h3>
-        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <p class="text-xs text-adaptive-muted">Configure distinct HTTP POST destination webhooks for each stakeholder tier (Slack, PagerDuty, MS Teams, HL7/FHIR connectors):</p>
-      
       <div class="space-y-3 text-xs">
         <div>
-          <label class="block font-bold text-rose-500 mb-1">🚚 In-Cab Driver ELD / IoT Display Webhook</label>
-          <input id="hookCab" type="text" placeholder="https://hooks.slack.com/services/... or http://..." class="w-full tower-card rounded p-2">
+          <label class="block font-bold text-rose-500 mb-1">🚚 In-Cab Driver ELD Webhook</label>
+          <input id="hookCab" type="text" placeholder="https://..." class="w-full tower-card rounded p-2">
         </div>
         <div>
-          <label class="block font-bold text-amber-500 mb-1">🏢 Sponsor QA PagerDuty Escalation Webhook</label>
-          <input id="hookQA" type="text" placeholder="https://events.pagerduty.com/v2/enqueue or http://..." class="w-full tower-card rounded p-2">
+          <label class="block font-bold text-amber-500 mb-1">🏢 Sponsor QA PagerDuty Webhook</label>
+          <input id="hookQA" type="text" placeholder="https://..." class="w-full tower-card rounded p-2">
         </div>
         <div>
-          <label class="block font-bold text-sky-500 mb-1">📡 Fleet Operations TMS Tower Webhook</label>
-          <input id="hookTMS" type="text" placeholder="https://webhook.site/... or http://..." class="w-full tower-card rounded p-2">
+          <label class="block font-bold text-sky-500 mb-1">📡 Fleet Operations TMS Webhook</label>
+          <input id="hookTMS" type="text" placeholder="https://..." class="w-full tower-card rounded p-2">
         </div>
         <div>
-          <label class="block font-bold text-purple-500 mb-1">🏥 Consignee Hospital HL7 / FHIR Intake Webhook</label>
-          <input id="hookHosp" type="text" placeholder="https://hospital-gateway.org/api/intake or http://..." class="w-full tower-card rounded p-2">
+          <label class="block font-bold text-purple-500 mb-1">🏥 Consignee Hospital Intake Webhook</label>
+          <input id="hookHosp" type="text" placeholder="https://..." class="w-full tower-card rounded p-2">
         </div>
       </div>
-
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-700/60">
-        <button onclick="closeSettingsModal()" class="px-4 py-2 tower-card rounded font-bold text-xs">Cancel</button>
-        <button onclick="saveWebhooks()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold text-xs flex items-center gap-1">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 tower-card rounded font-bold text-xs cursor-pointer">Cancel</button>
+        <button onclick="saveWebhooks()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold text-xs flex items-center gap-1 cursor-pointer">
           <i data-lucide="save" class="w-4 h-4"></i> Save Settings
         </button>
       </div>
@@ -426,43 +472,134 @@ Select a sponsor and corridor, then launch the mission to load the verified digi
   </div>
 
   <script>
-    lucide.createIcons();
+    // Independent Global Authentication Handler
+    window.handleLoginSubmit = async function(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      const emailEl = document.getElementById("loginEmail");
+      const passEl = document.getElementById("loginPass");
+      const errBox = document.getElementById("authErrorMsg");
+      const btnText = document.getElementById("btnLoginText");
 
+      const email = emailEl ? emailEl.value.trim() : "";
+      const password = passEl ? passEl.value.trim() : "";
+
+      if (errBox) errBox.classList.add("hidden");
+      if (btnText) btnText.innerText = "Authenticating...";
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, password: password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Authentication rejected.");
+
+        localStorage.setItem("cryoguard_user", JSON.stringify(data.user));
+        
+        // Remove modal from view
+        const modal = document.getElementById("authModal");
+        if (modal) {
+          modal.style.setProperty("display", "none", "important");
+          modal.classList.add("hidden");
+        }
+
+        const badge = document.getElementById("headerOperatorName");
+        if (badge) badge.innerText = data.user.name;
+
+        initDashboard();
+      } catch (err) {
+        if (errBox) {
+          errBox.innerText = "⚠️ " + err.message;
+          errBox.classList.remove("hidden");
+        }
+      } finally {
+        if (btnText) btnText.innerText = "Authenticate & Enter Tower";
+      }
+    };
+
+    window.handleLogout = function() {
+      if (confirm("Terminate active operator session?")) {
+        localStorage.removeItem("cryoguard_user");
+        location.reload();
+      }
+    };
+
+    // Siren Audio
+    let audioCtx = null, sirenOsc = null, sirenGain = null, sirenInterval = null, isSirenMuted = false;
+    function playSirenSound() {
+      if (isSirenMuted) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (sirenOsc) return;
+        sirenOsc = audioCtx.createOscillator();
+        sirenGain = audioCtx.createGain();
+        sirenOsc.type = "sawtooth";
+        sirenOsc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        sirenGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        sirenOsc.connect(sirenGain);
+        sirenGain.connect(audioCtx.destination);
+        sirenOsc.start();
+        let toggle = false;
+        sirenInterval = setInterval(() => {
+          if (!sirenOsc || isSirenMuted) return;
+          toggle = !toggle;
+          sirenOsc.frequency.exponentialRampToValueAtTime(toggle ? 540 : 880, audioCtx.currentTime + 0.35);
+        }, 400);
+      } catch (e) {}
+    }
+
+    function stopSirenSound() {
+      if (sirenInterval) { clearInterval(sirenInterval); sirenInterval = null; }
+      if (sirenOsc) { try { sirenOsc.stop(); sirenOsc.disconnect(); } catch(e){} sirenOsc = null; }
+    }
+
+    function toggleSirenAudio() {
+      isSirenMuted = !isSirenMuted;
+      const icon = document.getElementById("muteIcon");
+      const text = document.getElementById("muteText");
+      if (isSirenMuted) {
+        stopSirenSound();
+        icon.setAttribute("data-lucide", "volume-x");
+        text.innerText = "Unmute";
+      } else {
+        playSirenSound();
+        icon.setAttribute("data-lucide", "volume-2");
+        text.innerText = "Mute Audio";
+      }
+      lucide.createIcons();
+    }
+
+    function dismissSirenBanner() {
+      document.getElementById("sirenEmergencyBanner").classList.add("hidden");
+      stopSirenSound();
+    }
+
+    // Leaflet Map & Telemetrics Engine
     let map, carrierMarker, mainHighwayLine, detourLine, traversedLine;
     let facilityMarkers = [];
     let currentBaseTileLayer = null;
-    let currentMapLayerKey = "carto-dark";
-    let ws;
+    let currentMapLayerKey = "osm-standard";
+    let ws = null;
     let isMissionRunning = false;
     let currentCustomer = null;
-    let currentRoute = null;
 
     const TILE_PROVIDERS = {
-      "carto-dark": {
-        url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        attribution: "&copy; OpenStreetMap &copy; CARTO"
-      },
-      "osm-standard": {
-        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        attribution: "&copy; OpenStreetMap contributors"
-      },
-      "esri-satellite": {
-        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        attribution: "&copy; Esri &mdash; Source: Esri"
-      },
-      "carto-positron": {
-        url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        attribution: "&copy; OpenStreetMap &copy; CARTO"
-      }
+      "osm-standard": { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap" },
+      "esri-satellite": { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attribution: "&copy; Esri" }
     };
 
     function changeMapBaseLayer(layerKey) {
       currentMapLayerKey = layerKey;
-      if (currentBaseTileLayer) {
-        map.removeLayer(currentBaseTileLayer);
+      if (currentBaseTileLayer && map) map.removeLayer(currentBaseTileLayer);
+      const p = TILE_PROVIDERS[layerKey] || TILE_PROVIDERS["osm-standard"];
+      if (map) currentBaseTileLayer = L.tileLayer(p.url, { maxZoom: 18, attribution: p.attribution }).addTo(map);
+      const mc = document.getElementById("map");
+      if (mc) {
+        if (layerKey === "osm-standard") mc.classList.add("map-dark-filter");
+        else mc.classList.remove("map-dark-filter");
       }
-      const p = TILE_PROVIDERS[layerKey] || TILE_PROVIDERS["carto-dark"];
-      currentBaseTileLayer = L.tileLayer(p.url, { maxZoom: 18, attribution: p.attribution }).addTo(map);
     }
 
     function toggleTheme() {
@@ -470,120 +607,48 @@ Select a sponsor and corridor, then launch the mission to load the verified digi
       document.documentElement.classList.toggle("light", !isDark);
       localStorage.setItem("cryo_theme", isDark ? "dark" : "light");
       updateThemeIcon(isDark);
-
-      if (!isDark && currentMapLayerKey === "carto-dark") {
-        document.getElementById("selMapLayer").value = "carto-positron";
-        changeMapBaseLayer("carto-positron");
-      } else if (isDark && currentMapLayerKey === "carto-positron") {
-        document.getElementById("selMapLayer").value = "carto-dark";
-        changeMapBaseLayer("carto-dark");
-      }
-
-      setTimeout(() => map.invalidateSize(), 80);
+      changeMapBaseLayer(currentMapLayerKey);
+      if (map) setTimeout(() => map.invalidateSize(), 80);
     }
 
     function updateThemeIcon(isDark) {
       const icon = document.getElementById("themeIcon");
-      icon.setAttribute("data-lucide", isDark ? "sun" : "moon");
-      lucide.createIcons();
-    }
-
-    if (localStorage.getItem("cryo_theme") === "light") {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-      currentMapLayerKey = "carto-positron";
-      updateThemeIcon(false);
-    } else {
-      updateThemeIcon(true);
+      if (icon) {
+        icon.setAttribute("data-lucide", isDark ? "sun" : "moon");
+        lucide.createIcons();
+      }
     }
 
     function openSettingsModal() { document.getElementById("settingsModal").classList.remove("hidden"); }
     function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
 
     function saveWebhooks() {
-      const payload = {
-        webhook_incab: document.getElementById("hookCab").value.trim(),
-        webhook_qa: document.getElementById("hookQA").value.trim(),
-        webhook_tms: document.getElementById("hookTMS").value.trim(),
-        webhook_hosp: document.getElementById("hookHosp").value.trim()
-      };
       fetch("/api/save_webhooks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          webhook_incab: document.getElementById("hookCab").value.trim(),
+          webhook_qa: document.getElementById("hookQA").value.trim(),
+          webhook_tms: document.getElementById("hookTMS").value.trim(),
+          webhook_hosp: document.getElementById("hookHosp").value.trim()
+        })
       }).then(() => {
         closeSettingsModal();
-        alert("✅ Webhook configuration persisted successfully.");
+        alert("✅ Webhooks saved.");
       });
     }
-
-    map = L.map("map", { zoomControl: true }).setView([39.8283, -98.5795], 4);
-    changeMapBaseLayer(currentMapLayerKey);
-    document.getElementById("selMapLayer").value = currentMapLayerKey;
-
-    const carrierDivIcon = L.divIcon({
-      className: 'carrier-marker-wrapper',
-      html: `
-        <div id="carrierRing" class="carrier-ping-ring bg-sky-400"></div>
-        <div id="carrierDot" class="carrier-core-dot bg-sky-400"></div>
-      `,
-      iconSize: [34, 34],
-      iconAnchor: [17, 17]
-    });
-
-    carrierMarker = L.marker([39.8283, -98.5795], { icon: carrierDivIcon, zIndexOffset: 1000 }).addTo(map);
-
-    traversedLine = L.polyline([], { color: "#10b981", weight: 4.5, opacity: 0.95 }).addTo(map);
-    mainHighwayLine = L.polyline([], { color: "#0284c7", weight: 4, opacity: 0.85 }).addTo(map);
-    detourLine = L.polyline([], { color: "#f59e0b", weight: 4.5, opacity: 0.95 }).addTo(map);
-
-    fetch("/api/config_options")
-      .then(r => r.json())
-      .then(data => {
-        const selR = document.getElementById("selRoute");
-        data.routes.forEach(r => {
-          const opt = document.createElement("option");
-          opt.value = r.route_id;
-          opt.innerText = r.corridor_name.split("(")[0];
-          selR.appendChild(opt);
-        });
-
-        const selC = document.getElementById("selCustomer");
-        data.customers.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c.customer_id;
-          opt.innerText = `${c.customer_name} (${c.drug_product.slice(0, 18)}...)`;
-          selC.appendChild(opt);
-        });
-
-        const selA = document.getElementById("selAnomaly");
-        data.anomalies.forEach(a => {
-          const opt = document.createElement("option");
-          opt.value = a.id;
-          opt.innerText = a.name;
-          selA.appendChild(opt);
-        });
-
-        if (data.webhooks) {
-          document.getElementById("hookCab").value = data.webhooks.webhook_incab || "";
-          document.getElementById("hookQA").value = data.webhooks.webhook_qa || "";
-          document.getElementById("hookTMS").value = data.webhooks.webhook_tms || "";
-          document.getElementById("hookHosp").value = data.webhooks.webhook_hosp || "";
-        }
-      });
 
     function setPrimaryActionButtonState(running) {
       isMissionRunning = running;
       const btn = document.getElementById("btnPrimaryAction");
       const icon = document.getElementById("primaryActionIcon");
       const text = document.getElementById("primaryActionText");
-
       if (running) {
-        btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded transition flex items-center justify-center gap-1 shadow-md shadow-rose-600/30";
+        btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded transition flex items-center justify-center gap-1 shadow-md cursor-pointer";
         icon.setAttribute("data-lucide", "square");
         text.innerText = "Stop";
       } else {
-        btn.className = "flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded transition flex items-center justify-center gap-1 shadow-md shadow-sky-600/30";
+        btn.className = "flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded transition flex items-center justify-center gap-1 shadow-md cursor-pointer";
         icon.setAttribute("data-lucide", "play");
         text.innerText = "Launch";
       }
@@ -591,27 +656,24 @@ Select a sponsor and corridor, then launch the mission to load the verified digi
     }
 
     function clearAllPanels() {
-      document.getElementById("alertsContainer").innerHTML = '<div class="text-adaptive-muted text-xs font-medium">Incident communication channels are standing by. Multi-persona alert payloads will dispatch automatically upon anomaly detection.</div>';
-
-      document.getElementById("ymBay").innerText = "Bay #04 (Cryogenic Liquid N2 Quick-Dock)";
-      document.getElementById("ymCrew").innerText = "Team Alpha - Certified Cryo Technicians";
-      document.getElementById("ymWindow").innerText = "--:-- - --:--";
-      document.getElementById("ymStatusBadge").innerText = "STANDBY";
-      document.getElementById("ymStatusBadge").className = "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold px-3 py-1 rounded text-xs";
-      document.getElementById("ymEta").innerText = "--:--:--";
-      document.getElementById("ymToken").innerText = "STANDBY";
+      document.getElementById("alertsContainer").innerHTML = '<div class="text-adaptive-muted text-xs font-medium">Incident communication channels are standing by.</div>';
+      document.getElementById("ymBay").innerText = "--";
+      document.getElementById("ymCrew").innerText = "--";
+      document.getElementById("ymWindow").innerText = "--";
+      document.getElementById("ymStatusBadge").innerText = "NO ACTIVE DOCK RESERVATION";
+      document.getElementById("ymStatusBadge").className = "bg-slate-800 text-slate-400 font-mono font-bold px-3 py-1 rounded text-xs";
+      document.getElementById("ymEta").innerText = "--";
+      document.getElementById("ymToken").innerText = "--";
       document.getElementById("ymPin").innerText = "----";
-      document.getElementById("qrcodeBox").innerHTML = "";
-
-      document.getElementById("deliberationCards").innerHTML = '<div class="text-adaptive-muted text-xs font-medium">The agent multi-turn inner monologue will populate here as soon as an anomaly triggers.</div>';
-      document.getElementById("toolTraceContainer").innerHTML = '<div class="text-adaptive-muted text-xs font-medium">Autonomous agent in standby monitoring mode. Anomaly detection pending...</div>';
-
+      document.getElementById("ymConsumable").innerText = "Awaiting autonomous hub diversion decision";
+      document.getElementById("qrcodeBox").innerHTML = "NO PASS ISSUED";
+      document.getElementById("deliberationCards").innerHTML = '<div class="text-adaptive-muted text-xs font-medium">The agent inner monologue will populate upon anomaly trigger.</div>';
+      document.getElementById("toolTraceContainer").innerHTML = '<div class="text-adaptive-muted text-xs font-medium">Autonomous agent in standby monitoring mode.</div>';
       document.getElementById("gxpDocId").innerText = "--";
       document.getElementById("gxpCause").innerText = "--";
       document.getElementById("gxpLoss").innerText = "$0 USD";
       document.getElementById("gxpImpact").innerText = "--";
       document.getElementById("gxpHash").innerText = "SHA256:--";
-
       document.getElementById("qaSponsor").innerText = "--";
       document.getElementById("qaDrug").innerText = "--";
       document.getElementById("qaLot").innerText = "--";
@@ -620,7 +682,6 @@ Select a sponsor and corridor, then launch the mission to load the verified digi
       document.getElementById("qaSla").innerText = "--";
       document.getElementById("qaDamages").innerText = "--";
       document.getElementById("contractDocumentText").innerText = "Select a sponsor and corridor, then launch the mission to load the verified digital quality contract.";
-
       document.getElementById("ctxSponsor").innerText = "System Standby";
       document.getElementById("ctxDrug").innerText = "Select parameters and launch mission";
       document.getElementById("ctxCorridor").innerText = "--";
@@ -628,319 +689,35 @@ Select a sponsor and corridor, then launch the mission to load the verified digi
       document.getElementById("ctxAnomalyName").innerText = "Nominal In-Transit Cruise";
       document.getElementById("ctxFaultBadge").className = "inline-block mt-0.5 px-2 py-0.5 rounded font-mono text-[10px] bg-slate-800 text-emerald-400";
       document.getElementById("ctxFaultBadge").innerText = "🟢 NOMINAL";
+      dismissSirenBanner();
     }
 
     function renderQRCode(payload) {
       const box = document.getElementById("qrcodeBox");
       box.innerHTML = "";
-      new QRCode(box, {
-        text: payload,
-        width: 124,
-        height: 124,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
+      new QRCode(box, { text: payload, width: 124, height: 124, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
     }
 
-    function connectWS() {
-      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-      ws = new WebSocket(`${proto}//${window.location.host}/ws/telemetry`);
-
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-
-        if (msg.type === "MISSION_INITIALIZED") {
-          currentCustomer = msg.customer;
-          currentRoute = msg.route;
-          clearAllPanels();
-          setPrimaryActionButtonState(true);
-
-          document.getElementById("ctxSponsor").innerText = msg.customer.customer_name;
-          document.getElementById("ctxDrug").innerText = `${msg.customer.drug_product} ($${msg.customer.valuation_usd.toLocaleString()} USD)`;
-          document.getElementById("ctxCorridor").innerText = msg.route.corridor_name;
-          document.getElementById("ctxNodes").innerText = `Origin: ${msg.route.origin.name.slice(0, 22)} ➔ Dest: ${msg.route.destination.name.slice(0, 22)}`;
-          document.getElementById("ctxAnomalyName").innerText = "Nominal In-Transit Cruise";
-          document.getElementById("ctxFaultBadge").className = "inline-block mt-0.5 px-2 py-0.5 rounded font-mono text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400";
-          document.getElementById("ctxFaultBadge").innerText = "🟢 NOMINAL";
-
-          document.getElementById("corridorBadge").innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>${msg.route.corridor_name}</span>`;
-          document.getElementById("kpiFinance").innerText = `$${msg.customer.valuation_usd.toLocaleString()}`;
-          document.getElementById("kpiFinanceSub").innerText = `Insured: ${msg.customer.customer_name.slice(0, 18)}`;
-
-          document.getElementById("qaSponsor").innerText = `${msg.customer.customer_name} (${msg.customer.customer_id})`;
-          document.getElementById("qaDrug").innerText = msg.customer.drug_product;
-          document.getElementById("qaLot").innerText = msg.customer.batch_lot;
-          document.getElementById("qaVal").innerText = `$${msg.customer.valuation_usd.toLocaleString()} USD`;
-          document.getElementById("qaTitle").innerText = msg.customer.contract_title;
-          document.getElementById("qaSla").innerText = msg.customer.governing_sla_id;
-          document.getElementById("qaDamages").innerText = msg.customer.delay_liquidated_damages;
-
-          document.getElementById("contractDocumentText").innerText = 
-`MASTER QUALITY & CELLULAR LOGISTICS AGREEMENT
-SPONSOR: ${msg.customer.customer_name.toUpperCase()} (ID: ${msg.customer.customer_id})
-THERAPEUTIC LOT: ${msg.customer.batch_lot} | ASSET: ${msg.customer.drug_product}
-COMMERCIAL BATCH VALUATION: $${msg.customer.valuation_usd.toLocaleString()} USD
-
-1. QUALIFIED TEMPERATURE MANDATE:
-   Cargo shall be continuously monitored under ${msg.customer.governing_sla_id}.
-   Allowed thermal limit ceiling: +8.0°C. Immediate batch rejection triggered at +12.0°C.
-   Cumulative allowed excursion tolerance: ${msg.customer.allowed_excursion_mins || 60} minutes maximum.
-
-2. LIQUIDATED DAMAGES & GXP PENALTIES:
-   In the event of avoidable transit delay or surgical schedule failure:
-   ${msg.customer.delay_liquidated_damages}.
-
-3. AUTONOMOUS TRIAGE AUTHORITY:
-   The shipper delegates autonomous diversion decision protocol to CryoGuard Sentinel AI
-   under FDA 21 CFR Part 11 and cGMP Annex 15 electronic audit stipulations.`;
-
-          facilityMarkers.forEach(m => map.removeLayer(m));
-          facilityMarkers = [];
-
-          const o = msg.route.origin;
-          const d = msg.route.destination;
-          const oM = L.circleMarker([o.lat, o.lon], { radius: 8, fillColor: "#10b981", color: "#fff", weight: 2, fillOpacity: 1 }).addTo(map).bindPopup(`🏭 ORIGIN: ${o.name}`);
-          const dM = L.circleMarker([d.lat, d.lon], { radius: 8, fillColor: "#a855f7", color: "#fff", weight: 2, fillOpacity: 1 }).addTo(map).bindPopup(`🏥 DEST: ${d.name}`);
-          facilityMarkers.push(oM, dM);
-
-          msg.route.candidate_hubs.forEach(h => {
-            const hM = L.circleMarker([h.lat, h.lon], { radius: 6, fillColor: "#f97316", color: "#fff", weight: 1.5, fillOpacity: 0.9 }).addTo(map).bindPopup(`🏢 HUB: ${h.name}`);
-            facilityMarkers.push(hM);
-          });
-
-          const pts = msg.highway_pts.map(p => [p.lat, p.lon]);
-          mainHighwayLine.setLatLngs(pts);
-          detourLine.setLatLngs([]);
-          traversedLine.setLatLngs([]);
-          map.fitBounds(L.latLngBounds(pts).pad(0.15));
-
-          carrierMarker.setLatLng([msg.cur_lat, msg.cur_lon]);
-          updateCarrierColor("#38bdf8");
-
-          updatePhaseBar("NOMINAL");
-
-        } else if (msg.type === "TELEMETRY_TICK") {
-          carrierMarker.setLatLng([msg.cur_lat, msg.cur_lon]);
-          traversedLine.addLatLng([msg.cur_lat, msg.cur_lon]);
-
-          document.getElementById("hudClock").innerText = `🕒 Live Clock: ${msg.clock}`;
-          document.getElementById("hudTimes").innerHTML = `(Departure: <b>${msg.departure_time}</b> | Arrival ETA: <b>${msg.eta_str}</b>)`;
-          document.getElementById("coordBadge").innerText = `GPS: (${msg.cur_lat.toFixed(4)}, ${msg.cur_lon.toFixed(4)})`;
-
-          const isHot = msg.cur_temp > 6.0;
-          const tempEl = document.getElementById("kpiTemp");
-          tempEl.innerText = `${msg.cur_temp.toFixed(1)} °C`;
-          tempEl.className = `text-2xl font-extrabold font-mono mt-1 ${isHot ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400"}`;
-
-          document.getElementById("kpiRunway").innerText = isHot ? `${Math.max(4, Math.floor((8.0 - msg.cur_temp) / 0.04))} Mins` : "NOMINAL";
-          document.getElementById("kpiRunway").className = `text-2xl font-extrabold font-mono mt-1 ${isHot ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400"}`;
-
-          const etaEl = document.getElementById("kpiEta");
-          etaEl.innerText = msg.is_breach ? `${msg.eta_str} (BREACH)` : `${msg.eta_str} (ON TIME)`;
-          etaEl.className = `text-2xl font-extrabold font-mono mt-1 ${msg.is_breach ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400"}`;
-          document.getElementById("kpiEtaSub").innerText = msg.is_breach ? `⚠️ SLA Cutoff: ${msg.sla_str}` : `✅ Buffer: +${msg.sla_slack_sec}s slack (Cutoff: ${msg.sla_str})`;
-
-          if (msg.sim_state === "DELIVERED") {
-            setPrimaryActionButtonState(false);
-            document.getElementById("kpiFinance").innerText = `$${currentCustomer.valuation_usd.toLocaleString()} SAVED`;
-            document.getElementById("kpiFinance").className = "text-2xl font-extrabold font-mono mt-1 text-emerald-500 dark:text-emerald-400";
-            document.getElementById("kpiFinanceSub").innerText = `Zero batch spoilage under ${currentCustomer.contract_title}`;
-          }
-
-          updatePhaseBar(msg.sim_state);
-
-          if (msg.log_entry) {
-            const logBox = document.getElementById("auditLog");
-            const entry = document.createElement("div");
-            entry.innerText = msg.log_entry;
-            logBox.prepend(entry);
-          }
-
-          if (msg.yard_manifest) {
-            const b = document.getElementById("ymStatusBadge");
-            b.innerText = msg.yard_manifest.yard_status;
-            b.className = "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold px-3 py-1 rounded text-xs";
-          }
-
-        } else if (msg.type === "ANOMALY_TRIGGERED") {
-          updateCarrierColor("#ef4444");
-          detourLine.setLatLngs(msg.detour_pts.map(p => [p.lat, p.lon]));
-
-          document.getElementById("ctxAnomalyName").innerText = `${msg.anomaly.name} (Cycle #${msg.incident_count})`;
-          document.getElementById("ctxAnomalyName").className = "text-rose-500 font-bold";
-          document.getElementById("ctxFaultBadge").className = "inline-block mt-0.5 px-2 py-0.5 rounded font-mono text-[10px] bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30";
-          document.getElementById("ctxFaultBadge").innerText = `🚨 ${msg.anomaly.fault_code}`;
-
-          const logBox = document.getElementById("auditLog");
-          const anomEntry = document.createElement("div");
-          anomEntry.className = "text-rose-500 font-bold p-1 bg-rose-500/10 rounded";
-          anomEntry.innerText = `[${new Date().toLocaleTimeString()}] 🚨 SENSOR FAULT DETECTED: ${msg.anomaly.name} (${msg.anomaly.fault_code})! Compounded Incident #${msg.incident_count}.`;
-          logBox.prepend(anomEntry);
-
-          const replanEntry = document.createElement("div");
-          replanEntry.className = "text-sky-500 dark:text-sky-400 font-bold";
-          replanEntry.innerText = `[${new Date().toLocaleTimeString()}] 🔄 Autonomous Triage: Diverting to ${msg.chosen_hub.name}`;
-          logBox.prepend(replanEntry);
-
-          // 1. Stakeholder Alerts
-          const alertsBox = document.getElementById("alertsContainer");
-          alertsBox.innerHTML = "";
-          msg.stakeholder_alerts.forEach(al => {
-            const card = document.createElement("div");
-            card.className = "tower-card p-3.5 rounded-lg border-l-4 shadow-sm";
-            card.style.borderLeftColor = al.badge_color;
-            card.innerHTML = `
-              <div class="flex justify-between items-center mb-1">
-                <b class="text-adaptive-head text-xs">${al.channel}</b>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-white" style="background-color: ${al.badge_color}">${al.priority}</span>
-              </div>
-              <div class="text-adaptive-body text-xs mb-1.5 leading-relaxed">${al.message}</div>
-              <div class="flex justify-between text-[10px] text-adaptive-muted border-t border-slate-700/60 pt-1">
-                <span><b class="text-adaptive-head">Recipient:</b> ${al.recipient}</span>
-                <span class="text-sky-500 dark:text-sky-400 font-mono font-bold">⚡ ${al.protocol}</span>
-              </div>
-            `;
-            alertsBox.appendChild(card);
-          });
-
-          // 2. YMS Manifest & QR Code
-          const ym = msg.yard_manifest;
-          document.getElementById("ymBay").innerText = ym.assigned_bay;
-          document.getElementById("ymCrew").innerText = ym.staging_crew;
-          document.getElementById("ymWindow").innerText = ym.reservation_window;
-          document.getElementById("ymEta").innerText = ym.eta_target;
-          document.getElementById("ymConsumable").innerText = ym.consumable_reserved;
-          document.getElementById("ymToken").innerText = ym.security_token;
-          document.getElementById("ymPin").innerText = ym.dock_door_pin;
-
-          const b = document.getElementById("ymStatusBadge");
-          b.innerText = ym.yard_status;
-          b.className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono font-bold px-3 py-1 rounded text-xs";
-
-          renderQRCode(ym.qr_payload);
-
-          // 3. Cognitive Deliberation Monologue
-          const delibBox = document.getElementById("deliberationCards");
-          delibBox.innerHTML = "";
-          const pills = [
-            { tag: "[THREAT ANALYSIS]:", title: "STAGE 1: PHYSICAL TELEMETRY & THREAT ASSESSMENT", col: "border-rose-500 text-rose-500 bg-rose-500/10" },
-            { tag: "[CONTRACT AUDIT]:", title: "STAGE 2: SPONSOR QUALITY AGREEMENT (Q-AGR) AUDIT", col: "border-blue-500 text-blue-500 bg-blue-500/10" },
-            { tag: "[FACILITY TRADE-OFF]:", title: "STAGE 3: MULTI-CRITERIA FACILITY TRADE-OFF MATRIX", col: "border-amber-500 text-amber-500 bg-amber-500/10" },
-            { tag: "[DISPATCH ACTION]:", title: "STAGE 4: AUTONOMOUS OPERATIONAL DISPATCH ORDERS", col: "border-emerald-500 text-emerald-500 bg-emerald-500/10" }
-          ];
-
-          msg.gemini_result.cognitive_monologue.forEach((m, idx) => {
-            const p = pills[idx] || pills[0];
-            const clean = m.replace(p.tag, "").trim();
-            const card = document.createElement("div");
-            card.className = "tower-card p-3.5 rounded-lg border-l-4 shadow-sm";
-            card.style.borderLeftColor = idx === 0 ? "#ef4444" : (idx === 1 ? "#3b82f6" : (idx === 2 ? "#f59e0b" : "#10b981"));
-            card.innerHTML = `
-              <div class="inline-block text-[10px] font-bold px-2 py-0.5 rounded mb-1.5 border ${p.col}">${p.title}</div>
-              <div class="text-adaptive-body text-xs leading-relaxed">${clean}</div>
-            `;
-            delibBox.appendChild(card);
-          });
-
-          // 4. Tool Trace
-          const traceBox = document.getElementById("toolTraceContainer");
-          traceBox.innerHTML = "";
-          msg.gemini_result.trace.forEach(s => {
-            const row = document.createElement("div");
-            row.className = "tower-card border-l-4 border-l-sky-500 p-2.5 rounded-lg shadow-sm";
-            row.innerHTML = `
-              <div class="flex justify-between items-center mb-1">
-                <span class="font-bold text-sky-500 dark:text-sky-400">Step ${s.step}: <code>${s.tool_called}</code></span>
-                <span class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-mono text-[10px] font-bold">COMPLETED</span>
-              </div>
-              <div class="text-adaptive-muted text-[11px]">Arguments: <code>${JSON.stringify(s.arguments)}</code></div>
-            `;
-            traceBox.appendChild(row);
-          });
-
-          // 5. GxP Report
-          if (msg.gxp_report) {
-            document.getElementById("gxpDocId").innerText = msg.gxp_report.deviation_id;
-            document.getElementById("gxpCause").innerText = msg.gxp_report.root_cause_summary;
-            document.getElementById("gxpLoss").innerText = `$${msg.gxp_report.financial_loss_prevented_usd.toLocaleString()} USD`;
-            document.getElementById("gxpImpact").innerText = msg.gxp_report.product_quality_impact;
-            document.getElementById("gxpHash").innerText = `SHA256:${Math.abs(msg.gxp_report.deviation_id.length * 992817)}a981c900e4bf88912`;
-          }
-
-          updatePhaseBar("FAULT_DETECTED");
-
-        } else if (msg.type === "MISSION_STOPPED") {
-          setPrimaryActionButtonState(false);
-          updatePhaseBar("STANDBY");
-
-        } else if (msg.type === "MISSION_RESET") {
-          setPrimaryActionButtonState(false);
-          updatePhaseBar("STANDBY");
-          clearAllPanels();
-
-          document.getElementById("kpiTemp").innerText = "-- °C";
-          document.getElementById("kpiRunway").innerText = "-- Mins";
-          document.getElementById("kpiEta").innerText = "--:--:--";
-          document.getElementById("kpiFinance").innerText = "$0";
-          document.getElementById("hudClock").innerText = "🕒 Live Clock: --:--:--";
-          document.getElementById("auditLog").innerHTML = "<div>[--:--:--] ⚪ System in standby. Select customer parameters and click Launch.</div>";
-          document.getElementById("corridorBadge").innerHTML = `<span class="w-2 h-2 rounded-full bg-sky-400"></span><span>SYSTEM STANDBY (AWAITING LAUNCH)</span>`;
-
-          facilityMarkers.forEach(m => map.removeLayer(m));
-          facilityMarkers = [];
-          traversedLine.setLatLngs([]);
-          detourLine.setLatLngs([]);
-          mainHighwayLine.setLatLngs([]);
-          carrierMarker.setLatLng([39.8283, -98.5795]);
-          map.setView([39.8283, -98.5795], 4);
-          updateCarrierColor("#38bdf8");
-        }
-      };
-
-      ws.onclose = () => setTimeout(connectWS, 2000);
+    function updateSpeedMidRun(val) {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "UPDATE_SPEED", sim_speed: val }));
     }
 
     function updateCarrierColor(colorHex) {
       const ring = document.getElementById("carrierRing");
       const dot = document.getElementById("carrierDot");
-      if (ring && dot) {
-        ring.style.backgroundColor = colorHex;
-        dot.style.backgroundColor = colorHex;
-      }
+      if (ring && dot) { ring.style.backgroundColor = colorHex; dot.style.backgroundColor = colorHex; }
     }
 
-    connectWS();
-
     function updatePhaseBar(state) {
-      const p1 = document.getElementById("phase1");
-      const p2 = document.getElementById("phase2");
-      const p3 = document.getElementById("phase3");
-      const p4 = document.getElementById("phase4");
-      const p5 = document.getElementById("phase5");
-
-      [p1, p2, p3, p4, p5].forEach(el => el.className = "phase-step phase-idle");
-
-      if (state === "NOMINAL") {
-        p1.className = "phase-step phase-active";
-      } else if (state === "FAULT_DETECTED") {
-        p1.className = "phase-step phase-done";
-        p2.className = "phase-step phase-alert";
-      } else if (state === "EN_ROUTE_HUB") {
-        p1.className = "phase-step phase-done";
-        p2.className = "phase-step phase-done";
-        p3.className = "phase-step phase-active";
-      } else if (state === "SERVICING") {
-        p1.className = "phase-step phase-done";
-        p2.className = "phase-step phase-done";
-        p3.className = "phase-step phase-done";
-        p4.className = "phase-step phase-active";
-      } else if (state === "FINAL_LEG" || state === "DELIVERED") {
-        p1.className = "phase-step phase-done";
-        p2.className = "phase-step phase-done";
-        p3.className = "phase-step phase-done";
-        p4.className = "phase-step phase-done";
-        p5.className = state === "DELIVERED" ? "phase-step phase-done" : "phase-step phase-active";
+      const p = [document.getElementById("phase1"), document.getElementById("phase2"), document.getElementById("phase3"), document.getElementById("phase4"), document.getElementById("phase5")];
+      p.forEach(el => el.className = "phase-step phase-idle");
+      if (state === "NOMINAL") p[0].className = "phase-step phase-active";
+      else if (state === "FAULT_DETECTED") { p[0].className = "phase-step phase-done"; p[1].className = "phase-step phase-alert"; }
+      else if (state === "EN_ROUTE_HUB") { p[0].className = "phase-step phase-done"; p[1].className = "phase-step phase-done"; p[2].className = "phase-step phase-active"; }
+      else if (state === "SERVICING") { p[0].className = "phase-step phase-done"; p[1].className = "phase-step phase-done"; p[2].className = "phase-step phase-done"; p[3].className = "phase-step phase-active"; }
+      else if (state === "FINAL_LEG" || state === "DELIVERED") {
+        p[0].className = p[1].className = p[2].className = p[3].className = "phase-step phase-done";
+        p[4].className = state === "DELIVERED" ? "phase-step phase-done" : "phase-step phase-active";
       }
     }
 
@@ -949,28 +726,15 @@ COMMERCIAL BATCH VALUATION: $${msg.customer.valuation_usd.toLocaleString()} USD
       const btns = document.querySelectorAll(".tab-btn");
       tabs.forEach((t, i) => t.classList.toggle("hidden", i !== idx));
       btns.forEach((b, i) => {
-        if (i === idx) {
-          b.className = "tab-btn px-4 py-2 rounded-t tower-panel border-b-0 text-sky-500 dark:text-sky-400 flex items-center gap-1.5 font-bold";
-        } else {
-          b.className = "tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 font-medium";
-        }
+        b.className = i === idx ? "tab-btn px-4 py-2 rounded-t tower-panel border-b-0 text-sky-500 dark:text-sky-400 flex items-center gap-1.5 font-bold cursor-pointer" : "tab-btn px-4 py-2 rounded-t text-adaptive-muted hover:text-sky-500 flex items-center gap-1.5 font-medium cursor-pointer";
       });
-      if (idx === 0) setTimeout(() => map.invalidateSize(), 50);
+      if (idx === 0 && map) setTimeout(() => map.invalidateSize(), 50);
       lucide.createIcons();
     }
 
     function toggleMissionPlayback() {
-      if (isMissionRunning) {
-        stopMission();
-      } else {
-        launchMission();
-      }
-    }
-
-    function updateSpeedMidRun(val) {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: "UPDATE_SPEED", sim_speed: val }));
-      }
+      if (isMissionRunning) stopMission();
+      else launchMission();
     }
 
     function launchMission() {
@@ -978,35 +742,349 @@ COMMERCIAL BATCH VALUATION: $${msg.customer.valuation_usd.toLocaleString()} USD
       const c = document.getElementById("selCustomer").value;
       const a = document.getElementById("selAnomaly").value;
       const spd = document.getElementById("selSpeed").value;
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: "LAUNCH_MISSION", route_id: r, customer_id: c, anomaly_id: a, sim_speed: spd }));
-      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "LAUNCH_MISSION", route_id: r, customer_id: c, anomaly_id: a, sim_speed: spd }));
     }
 
     function stopMission() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: "STOP_MISSION" }));
-      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "STOP_MISSION" }));
     }
 
     function resetMission() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: "RESET_MISSION" }));
-      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "RESET_MISSION" }));
     }
 
     function triggerFault() {
       const a = document.getElementById("selAnomaly").value;
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: "TRIGGER_ANOMALY", anomaly_id: a }));
-      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "TRIGGER_ANOMALY", anomaly_id: a }));
     }
 
     function triggerSurprise() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: "TRIGGER_SURPRISE_OUTAGE" }));
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "TRIGGER_SURPRISE_OUTAGE" }));
+    }
+
+    function initDashboard() {
+      if (!map) {
+        map = L.map("map", { zoomControl: true }).setView([39.8283, -98.5795], 4);
+        changeMapBaseLayer(currentMapLayerKey);
+        document.getElementById("selMapLayer").value = currentMapLayerKey;
+
+        const carrierDivIcon = L.divIcon({
+          className: 'carrier-marker-wrapper',
+          html: '<div id="carrierRing" class="carrier-ping-ring bg-sky-400"></div><div id="carrierDot" class="carrier-core-dot bg-sky-400"></div>',
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
+        });
+
+        carrierMarker = L.marker([39.8283, -98.5795], { icon: carrierDivIcon, zIndexOffset: 1000 }).addTo(map);
+        traversedLine = L.polyline([], { color: "#10b981", weight: 4.5, opacity: 0.95 }).addTo(map);
+        mainHighwayLine = L.polyline([], { color: "#0284c7", weight: 4, opacity: 0.85 }).addTo(map);
+        detourLine = L.polyline([], { color: "#f59e0b", weight: 4.5, opacity: 0.95 }).addTo(map);
+      }
+
+      fetch("/api/config_options")
+        .then(r => r.json())
+        .then(data => {
+          const selR = document.getElementById("selRoute");
+          selR.innerHTML = '<option value="AUTO">🎲 Auto (Any Corridor)</option>';
+          data.routes.forEach(r => {
+            const opt = document.createElement("option");
+            opt.value = r.route_id;
+            opt.innerText = r.corridor_name.split("(")[0];
+            selR.appendChild(opt);
+          });
+
+          const selC = document.getElementById("selCustomer");
+          selC.innerHTML = '<option value="AUTO">🎲 Auto (Random Sponsor)</option>';
+          data.customers.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c.customer_id;
+            opt.innerText = `${c.customer_name} (${c.drug_product.slice(0, 18)}...)`;
+            selC.appendChild(opt);
+          });
+
+          const selA = document.getElementById("selAnomaly");
+          selA.innerHTML = '<option value="AUTO">🎲 Auto (Dynamic Fault)</option>';
+          data.anomalies.forEach(a => {
+            const opt = document.createElement("option");
+            opt.value = a.id;
+            opt.innerText = a.name;
+            selA.appendChild(opt);
+          });
+
+          if (data.webhooks) {
+            document.getElementById("hookCab").value = data.webhooks.webhook_incab || "";
+            document.getElementById("hookQA").value = data.webhooks.webhook_qa || "";
+            document.getElementById("hookTMS").value = data.webhooks.webhook_tms || "";
+            document.getElementById("hookHosp").value = data.webhooks.webhook_hosp || "";
+          }
+        });
+
+      if (!ws) {
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        ws = new WebSocket(`${proto}//${window.location.host}/ws/telemetry`);
+
+        ws.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+
+          if (msg.type === "MISSION_INITIALIZED") {
+            currentCustomer = msg.customer;
+            clearAllPanels();
+            setPrimaryActionButtonState(true);
+
+            document.getElementById("ctxSponsor").innerText = msg.customer.customer_name;
+            document.getElementById("ctxDrug").innerText = `${msg.customer.drug_product} ($${msg.customer.valuation_usd.toLocaleString()} USD)`;
+            document.getElementById("ctxCorridor").innerText = msg.route.corridor_name;
+            document.getElementById("ctxNodes").innerText = `Origin: ${msg.route.origin.name.slice(0, 22)} ➔ Dest: ${msg.route.destination.name.slice(0, 22)}`;
+            document.getElementById("ctxAnomalyName").innerText = "Nominal In-Transit Cruise";
+            document.getElementById("ctxFaultBadge").className = "inline-block mt-0.5 px-2 py-0.5 rounded font-mono text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400";
+            document.getElementById("ctxFaultBadge").innerText = "🟢 NOMINAL";
+
+            document.getElementById("corridorBadge").innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>${msg.route.corridor_name}</span>`;
+            document.getElementById("kpiFinance").innerText = `$${msg.customer.valuation_usd.toLocaleString()}`;
+            document.getElementById("kpiFinanceSub").innerText = `Insured: ${msg.customer.customer_name.slice(0, 18)}`;
+
+            document.getElementById("qaSponsor").innerText = `${msg.customer.customer_name} (${msg.customer.customer_id})`;
+            document.getElementById("qaDrug").innerText = msg.customer.drug_product;
+            document.getElementById("qaLot").innerText = msg.customer.batch_lot;
+            document.getElementById("qaVal").innerText = `$${msg.customer.valuation_usd.toLocaleString()} USD`;
+            document.getElementById("qaTitle").innerText = msg.customer.contract_title;
+            document.getElementById("qaSla").innerText = msg.customer.governing_sla_id;
+            document.getElementById("qaDamages").innerText = msg.customer.delay_liquidated_damages;
+
+            document.getElementById("contractDocumentText").innerText = 
+`MASTER QUALITY & CELLULAR LOGISTICS AGREEMENT
+SPONSOR: ${msg.customer.customer_name.toUpperCase()} (ID: ${msg.customer.customer_id})
+THERAPEUTIC LOT: ${msg.customer.batch_lot} | ASSET: ${msg.customer.drug_product}
+COMMERCIAL BATCH VALUATION: $${msg.customer.valuation_usd.toLocaleString()} USD
+
+1. QUALIFIED TEMPERATURE MANDATE:
+   Cargo monitored under ${msg.customer.governing_sla_id}. Limit ceiling: +8.0°C.
+   Immediate batch rejection at +12.0°C. Excursion tolerance: ${msg.customer.allowed_excursion_mins || 60} min max.
+
+2. LIQUIDATED DAMAGES & GXP PENALTIES:
+   ${msg.customer.delay_liquidated_damages}.
+
+3. AUTONOMOUS TRIAGE AUTHORITY:
+   Shipper delegates diversion authority to CryoGuard Sentinel AI under 21 CFR Part 11.`;
+
+            facilityMarkers.forEach(m => map.removeLayer(m));
+            facilityMarkers = [];
+
+            const o = msg.route.origin;
+            const d = msg.route.destination;
+            const oM = L.circleMarker([o.lat, o.lon], { radius: 8, fillColor: "#10b981", color: "#fff", weight: 2, fillOpacity: 1 }).addTo(map).bindPopup(`🏭 ORIGIN: ${o.name}`);
+            const dM = L.circleMarker([d.lat, d.lon], { radius: 8, fillColor: "#a855f7", color: "#fff", weight: 2, fillOpacity: 1 }).addTo(map).bindPopup(`🏥 DEST: ${d.name}`);
+            facilityMarkers.push(oM, dM);
+
+            msg.route.candidate_hubs.forEach(h => {
+              const hM = L.circleMarker([h.lat, h.lon], { radius: 6, fillColor: "#f97316", color: "#fff", weight: 1.5, fillOpacity: 0.9 }).addTo(map).bindPopup(`🏢 HUB: ${h.name}`);
+              facilityMarkers.push(hM);
+            });
+
+            const pts = msg.highway_pts.map(p => [p.lat, p.lon]);
+            mainHighwayLine.setLatLngs(pts);
+            detourLine.setLatLngs([]);
+            traversedLine.setLatLngs([]);
+            map.fitBounds(L.latLngBounds(pts).pad(0.15));
+
+            carrierMarker.setLatLng([msg.cur_lat, msg.cur_lon]);
+            updateCarrierColor("#38bdf8");
+            updatePhaseBar("NOMINAL");
+
+          } else if (msg.type === "TELEMETRY_TICK") {
+            carrierMarker.setLatLng([msg.cur_lat, msg.cur_lon]);
+            traversedLine.addLatLng([msg.cur_lat, msg.cur_lon]);
+
+            document.getElementById("hudClock").innerText = `🕒 Live Clock: ${msg.clock}`;
+            document.getElementById("hudTimes").innerHTML = `(Departure: <b>${msg.departure_time}</b> | Arrival ETA: <b>${msg.eta_str}</b>)`;
+            document.getElementById("coordBadge").innerText = `GPS: (${msg.cur_lat.toFixed(4)}, ${msg.cur_lon.toFixed(4)})`;
+
+            const isHot = msg.cur_temp > 6.0;
+            const tempEl = document.getElementById("kpiTemp");
+            tempEl.innerText = `${msg.cur_temp.toFixed(1)} °C`;
+            tempEl.className = `text-2xl font-extrabold font-mono mt-1 ${isHot ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400"}`;
+
+            document.getElementById("kpiRunway").innerText = isHot ? `${Math.max(4, Math.floor((8.0 - msg.cur_temp) / 0.04))} Mins` : "NOMINAL";
+            document.getElementById("kpiRunway").className = `text-2xl font-extrabold font-mono mt-1 ${isHot ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400"}`;
+
+            const etaEl = document.getElementById("kpiEta");
+            etaEl.innerText = msg.is_breach ? `${msg.eta_str} (BREACH)` : `${msg.eta_str} (ON TIME)`;
+            etaEl.className = `text-2xl font-extrabold font-mono mt-1 ${msg.is_breach ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400"}`;
+            document.getElementById("kpiEtaSub").innerText = msg.is_breach ? `⚠️ SLA Cutoff: ${msg.sla_str}` : `✅ Buffer: +${msg.sla_slack_sec}s slack (Cutoff: ${msg.sla_str})`;
+
+            if (msg.sim_state === "FINAL_LEG" || msg.sim_state === "DELIVERED") dismissSirenBanner();
+
+            if (msg.sim_state === "DELIVERED") {
+              setPrimaryActionButtonState(false);
+              document.getElementById("kpiFinance").innerText = `$${currentCustomer.valuation_usd.toLocaleString()} SAVED`;
+              document.getElementById("kpiFinance").className = "text-2xl font-extrabold font-mono mt-1 text-emerald-500 dark:text-emerald-400";
+              document.getElementById("kpiFinanceSub").innerText = `Zero batch spoilage under ${currentCustomer.contract_title}`;
+            }
+
+            updatePhaseBar(msg.sim_state);
+
+            if (msg.log_entry) {
+              const logBox = document.getElementById("auditLog");
+              const entry = document.createElement("div");
+              entry.innerText = msg.log_entry;
+              logBox.prepend(entry);
+            }
+
+            if (msg.yard_manifest) {
+              const b = document.getElementById("ymStatusBadge");
+              b.innerText = msg.yard_manifest.yard_status;
+              b.className = "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono font-bold px-3 py-1 rounded text-xs";
+            }
+
+          } else if (msg.type === "ANOMALY_TRIGGERED") {
+            updateCarrierColor("#ef4444");
+            detourLine.setLatLngs(msg.detour_pts.map(p => [p.lat, p.lon]));
+
+            const sirenBanner = document.getElementById("sirenEmergencyBanner");
+            sirenBanner.classList.remove("hidden");
+            document.getElementById("sirenFaultTag").innerText = msg.anomaly.fault_code;
+            document.getElementById("sirenEmergencyMsg").innerText = `🚨 ${msg.anomaly.name}: Incident Cycle #${msg.incident_count}. Diverting to ${msg.chosen_hub.name}.`;
+            playSirenSound();
+
+            document.getElementById("ctxAnomalyName").innerText = `${msg.anomaly.name} (Cycle #${msg.incident_count})`;
+            document.getElementById("ctxAnomalyName").className = "text-rose-500 font-bold";
+            document.getElementById("ctxFaultBadge").className = "inline-block mt-0.5 px-2 py-0.5 rounded font-mono text-[10px] bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30";
+            document.getElementById("ctxFaultBadge").innerText = `🚨 ${msg.anomaly.fault_code}`;
+
+            const logBox = document.getElementById("auditLog");
+            const anomEntry = document.createElement("div");
+            anomEntry.className = "text-rose-500 font-bold p-1 bg-rose-500/10 rounded";
+            anomEntry.innerText = `[${new Date().toLocaleTimeString()}] 🚨 SENSOR FAULT DETECTED: ${msg.anomaly.name} (${msg.anomaly.fault_code})! Compounded Incident #${msg.incident_count}.`;
+            logBox.prepend(anomEntry);
+
+            const replanEntry = document.createElement("div");
+            replanEntry.className = "text-sky-500 dark:text-sky-400 font-bold";
+            replanEntry.innerText = `[${new Date().toLocaleTimeString()}] 🔄 Autonomous Triage: Diverting to ${msg.chosen_hub.name}`;
+            logBox.prepend(replanEntry);
+
+            const alertsBox = document.getElementById("alertsContainer");
+            alertsBox.innerHTML = "";
+            msg.stakeholder_alerts.forEach(al => {
+              const card = document.createElement("div");
+              card.className = "tower-card p-3.5 rounded-lg border-l-4 shadow-sm";
+              card.style.borderLeftColor = al.badge_color;
+              card.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                  <b class="text-adaptive-head text-xs">${al.channel}</b>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-white" style="background-color: ${al.badge_color}">${al.priority}</span>
+                </div>
+                <div class="text-adaptive-body text-xs mb-1.5 leading-relaxed">${al.message}</div>
+                <div class="flex justify-between text-[10px] text-adaptive-muted border-t border-slate-700/60 pt-1">
+                  <span><b class="text-adaptive-head">Recipient:</b> ${al.recipient}</span>
+                  <span class="text-sky-500 dark:text-sky-400 font-mono font-bold">⚡ ${al.protocol}</span>
+                </div>
+              `;
+              alertsBox.appendChild(card);
+            });
+
+            const ym = msg.yard_manifest;
+            document.getElementById("ymBay").innerText = ym.assigned_bay;
+            document.getElementById("ymCrew").innerText = ym.staging_crew;
+            document.getElementById("ymWindow").innerText = ym.reservation_window;
+            document.getElementById("ymEta").innerText = ym.eta_target;
+            document.getElementById("ymConsumable").innerText = ym.consumable_reserved;
+            document.getElementById("ymToken").innerText = ym.security_token;
+            document.getElementById("ymPin").innerText = ym.dock_door_pin;
+
+            const b = document.getElementById("ymStatusBadge");
+            b.innerText = ym.yard_status;
+            b.className = "bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono font-bold px-3 py-1 rounded text-xs";
+
+            renderQRCode(ym.qr_payload);
+
+            const delibBox = document.getElementById("deliberationCards");
+            delibBox.innerHTML = "";
+            const pills = [
+              { tag: "[THREAT ANALYSIS]:", title: "STAGE 1: PHYSICAL TELEMETRY & THREAT ASSESSMENT", col: "border-rose-500 text-rose-500 bg-rose-500/10" },
+              { tag: "[CONTRACT AUDIT]:", title: "STAGE 2: SPONSOR QUALITY AGREEMENT (Q-AGR) AUDIT", col: "border-blue-500 text-blue-500 bg-blue-500/10" },
+              { tag: "[FACILITY TRADE-OFF]:", title: "STAGE 3: MULTI-CRITERIA FACILITY TRADE-OFF MATRIX", col: "border-amber-500 text-amber-500 bg-amber-500/10" },
+              { tag: "[DISPATCH ACTION]:", title: "STAGE 4: AUTONOMOUS OPERATIONAL DISPATCH ORDERS", col: "border-emerald-500 text-emerald-500 bg-emerald-500/10" }
+            ];
+
+            msg.gemini_result.cognitive_monologue.forEach((m, idx) => {
+              const p = pills[idx] || pills[0];
+              const clean = m.replace(p.tag, "").trim();
+              const card = document.createElement("div");
+              card.className = "tower-card p-3.5 rounded-lg border-l-4 shadow-sm";
+              card.style.borderLeftColor = idx === 0 ? "#ef4444" : (idx === 1 ? "#3b82f6" : (idx === 2 ? "#f59e0b" : "#10b981"));
+              card.innerHTML = `
+                <div class="inline-block text-[10px] font-bold px-2 py-0.5 rounded mb-1.5 border ${p.col}">${p.title}</div>
+                <div class="text-adaptive-body text-xs leading-relaxed">${clean}</div>
+              `;
+              delibBox.appendChild(card);
+            });
+
+            const traceBox = document.getElementById("toolTraceContainer");
+            traceBox.innerHTML = "";
+            msg.gemini_result.trace.forEach(s => {
+              const row = document.createElement("div");
+              row.className = "tower-card border-l-4 border-l-sky-500 p-2.5 rounded-lg shadow-sm";
+              row.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                  <span class="font-bold text-sky-500 dark:text-sky-400">Step ${s.step}: <code>${s.tool_called}</code></span>
+                  <span class="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-mono text-[10px] font-bold">COMPLETED</span>
+                </div>
+                <div class="text-adaptive-muted text-[11px]">Arguments: <code>${JSON.stringify(s.arguments)}</code></div>
+              `;
+              traceBox.appendChild(row);
+            });
+
+            if (msg.gxp_report) {
+              document.getElementById("gxpDocId").innerText = msg.gxp_report.deviation_id;
+              document.getElementById("gxpCause").innerText = msg.gxp_report.root_cause_summary;
+              document.getElementById("gxpLoss").innerText = `$${msg.gxp_report.financial_loss_prevented_usd.toLocaleString()} USD`;
+              document.getElementById("gxpImpact").innerText = msg.gxp_report.product_quality_impact;
+              document.getElementById("gxpHash").innerText = `SHA256:${Math.abs(msg.gxp_report.deviation_id.length * 992817)}a981c900e4bf88912`;
+            }
+
+            updatePhaseBar("FAULT_DETECTED");
+
+          } else if (msg.type === "MISSION_STOPPED") {
+            setPrimaryActionButtonState(false);
+            updatePhaseBar("STANDBY");
+            dismissSirenBanner();
+
+          } else if (msg.type === "MISSION_RESET") {
+            setPrimaryActionButtonState(false);
+            updatePhaseBar("STANDBY");
+            clearAllPanels();
+            facilityMarkers.forEach(m => map.removeLayer(m));
+            facilityMarkers = [];
+            traversedLine.setLatLngs([]);
+            detourLine.setLatLngs([]);
+            mainHighwayLine.setLatLngs([]);
+            carrierMarker.setLatLng([39.8283, -98.5795]);
+            map.setView([39.8283, -98.5795], 4);
+            updateCarrierColor("#38bdf8");
+          }
+        };
+
+        ws.onclose = () => {
+          if (localStorage.getItem("cryoguard_user")) setTimeout(initDashboard, 2000);
+        };
       }
     }
+
+    // Immediate check on script parse
+    (function() {
+      if (window.lucide) lucide.createIcons();
+      const saved = localStorage.getItem("cryoguard_user");
+      if (saved) {
+        try {
+          const u = JSON.parse(saved);
+          const modal = document.getElementById("authModal");
+          if (modal) modal.style.display = "none";
+          const badge = document.getElementById("headerOperatorName");
+          if (badge) badge.innerText = u.name || "Operator";
+          window.addEventListener("DOMContentLoaded", initDashboard);
+        } catch(e) {}
+      }
+    })();
   </script>
 </body>
 </html>

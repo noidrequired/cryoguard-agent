@@ -6,3 +6,9 @@ __pycache__/
 local_python/
 venv/
 .venv/
+data/users.json
+.streamlit/webhook_config.json
+.env
+__pycache__/
+*.pyc
+.DS_Store

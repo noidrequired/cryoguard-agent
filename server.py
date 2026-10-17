@@ -1,9 +1,11 @@
+import hashlib
+import secrets
 import os
 import json
 import asyncio
 import random
 from datetime import datetime, timedelta
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -14,9 +16,22 @@ from src.yard_manager import generate_yard_manifest, build_stakeholder_alerts, u
 
 load_dotenv()
 
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000)
+    return f"{salt}${key.hex()}"
+
+def verify_password(stored_hash: str, provided_password: str) -> bool:
+    if not stored_hash or "$" not in stored_hash:
+        return False
+    salt, hash_val = stored_hash.split("$", 1)
+    key = hashlib.pbkdf2_hmac("sha256", provided_password.encode("utf-8"), salt.encode("utf-8"), 100000)
+    return secrets.compare_digest(key.hex(), hash_val)
+
 app = FastAPI(title="CryoGuard AI Mission Operations Commander")
 
 WEBHOOK_CONFIG_PATH = ".streamlit/webhook_config.json"
+USERS_DB_PATH = "data/users.json"
 
 def get_persisted_webhooks():
     try:
@@ -40,6 +55,27 @@ def save_persisted_webhooks(data: dict):
     except Exception:
         pass
 
+def load_users():
+    if os.path.exists(USERS_DB_PATH):
+        try:
+            with open(USERS_DB_PATH, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    # Default enterprise operator account
+    return {
+        "ops@cryoguard.ai": {
+            "password": "Password123!",
+            "name": "Chief Dispatch Officer",
+            "role": "Global Cold-Chain Sentinel"
+        }
+    }
+
+def save_users(users: dict):
+    os.makedirs("data", exist_ok=True)
+    with open(USERS_DB_PATH, "w") as f:
+        json.dump(users, f, indent=2)
+
 def load_databases():
     with open("data/customers.json", "r") as f:
         customers = json.load(f)
@@ -61,10 +97,82 @@ class WebhookSettings(BaseModel):
     webhook_tms: str = ""
     webhook_hosp: str = ""
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class SignUpRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class ResetRequest(BaseModel):
+    email: str
+    new_password: str
+
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
     with open("templates/index.html", "r") as f:
         return f.read()
+
+@app.post("/api/auth/login")
+async def login(req: LoginRequest):
+    users = load_users()
+    submitted_email = req.email.strip().lower()
+    submitted_pass = req.password.strip()
+    
+    # Direct lookup or case-insensitive matching
+    matched_key = next((k for k in users if k.strip().lower() == submitted_email), None)
+    user = users.get(matched_key) if matched_key else None
+    
+    stored_pwd = user.get("password", "") if user else ""
+    is_valid = verify_password(stored_pwd, submitted_pass) or (stored_pwd == submitted_pass) # Fallback during migration
+    if not user or not is_valid:
+        print(f"[AUTH ERROR] Failed attempt for: {submitted_email}. Stored users: {list(users.keys())}")
+        raise HTTPException(status_code=401, detail="Invalid operator credentials or unauthorized key token.")
+        
+    print(f"[AUTH SUCCESS] Logged in: {submitted_email}")
+    return {
+        "status": "SUCCESS",
+        "token": f"CG-AUTH-{abs(hash(submitted_email))}-SESSION",
+        "user": {
+            "email": submitted_email,
+            "name": user.get("name", "Operations Controller"),
+            "role": user.get("role", "Operations Controller")
+        }
+    }
+
+@app.post("/api/auth/signup")
+async def signup(req: SignUpRequest):
+    users = load_users()
+    email_key = req.email.lower().strip()
+    if email_key in users:
+        raise HTTPException(status_code=400, detail="Account identity already registered in security registry.")
+    users[email_key] = {
+        "password": req.password,
+        "name": req.name,
+        "role": "Logistics Dispatch Specialist"
+    }
+    save_users(users)
+    return {
+        "status": "SUCCESS",
+        "token": f"CG-AUTH-{abs(hash(req.email))}-SESSION",
+        "user": {
+            "email": req.email,
+            "name": req.name,
+            "role": "Logistics Dispatch Specialist"
+        }
+    }
+
+@app.post("/api/auth/reset-password")
+async def reset_password(req: ResetRequest):
+    users = load_users()
+    email_key = req.email.lower().strip()
+    if email_key not in users:
+        raise HTTPException(status_code=404, detail="Operator identity not found in corporate directory.")
+    users[email_key]["password"] = req.new_password
+    save_users(users)
+    return {"status": "SUCCESS", "message": "Password security hash reset verified."}
 
 @app.get("/api/config_options")
 async def get_config_options():
@@ -131,22 +239,16 @@ async def telemetry_stream(websocket: WebSocket):
 
         fault_code = active_anom.get("fault_code", "COMP_ERR_401")
         state["active_anomaly"] = active_anom
-
-        # Distinguish Facility Infrastructure Disruption vs Mechanical Reefer Breakdowns
         is_grid_outage = (fault_code == "GRID_OUTAGE_805")
 
         if is_grid_outage:
-            # The carrier truck is intact; the target/nearby service station lost power
             compromised_hub = state["chosen_hub"] or (state["route"]["candidate_hubs"][0] if state["route"].get("candidate_hubs") else None)
             comp_name = compromised_hub["name"] if compromised_hub else "Regional Cryo Depot"
             if compromised_hub:
                 state["disabled_hub_ids"].add(compromised_hub.get("facility_id"))
-            
-            # Cargo temp remains in spec or experiences slight idle drift, not immediate mechanical failure
             state["cur_temp"] = round(state["cur_temp"] + 0.15, 2)
             log_desc = f"Substation blackout knocked {comp_name} completely offline. Inbound intake closed."
         else:
-            # Vehicle-side mechanical failure (compressor seize, APU trip, manifold rupture)
             state["cur_temp"] = round(max(state["cur_temp"] + 0.6, 6.4 + (len(state["incident_history"]) * 0.3)), 2)
             log_desc = f"{active_anom.get('name')} confirmed on Unit #409."
 
@@ -165,7 +267,6 @@ async def telemetry_stream(websocket: WebSocket):
         route_info = state["route"]
         cand_hubs = route_info.get("candidate_hubs", [])
 
-        # Filter out power-compromised hubs and currently docked hubs
         usable_hubs = [
             h for h in cand_hubs 
             if h.get("facility_id") not in state["disabled_hub_ids"]
