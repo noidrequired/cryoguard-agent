@@ -52,6 +52,17 @@
     .light .card-highlight { background: #e6edf5; border: 1px solid #cbd5e1; }
 
     #map { height: 490px; width: 100%; border-radius: 8px; z-index: 10; }
+    
+    /* Login Background Map Styling with Subdued Opacity */
+    #loginBgMap {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
     .carrier-marker-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
     .carrier-ping-ring { position: absolute; width: 34px; height: 34px; border-radius: 50%; pointer-events: none; animation: radarPing 2s linear infinite; }
     .carrier-core-dot { position: relative; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #ffffff; box-shadow: 0 0 12px rgba(56, 189, 248, 0.9); z-index: 20; }
@@ -69,8 +80,11 @@
 <body class="p-3 md:p-4 space-y-3">
 
   <!-- AUTHENTICATION GATEWAY -->
-  <div id="authModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-    <div class="tower-panel rounded-2xl max-w-md w-full p-7 space-y-5 border border-sky-500/40 shadow-2xl">
+  <div id="authModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-hidden">
+    <div id="loginBgMap" class="map-dark-filter"></div>
+    <div class="absolute inset-0 bg-slate-950/60 z-[2] pointer-events-none"></div>
+
+    <div class="relative z-10 tower-panel rounded-2xl max-w-md w-full p-7 space-y-5 border border-sky-500/40 shadow-2xl bg-slate-900/95">
       <div class="flex items-center space-x-3 border-b border-slate-700/60 pb-4">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold">
           <i data-lucide="shield-check" class="w-6 h-6"></i>
@@ -1070,9 +1084,31 @@ COMMERCIAL BATCH VALUATION: $${msg.customer.valuation_usd.toLocaleString()} USD
       }
     }
 
+    // Login Background Map Initialization
+    let loginBgMap = null;
+    function initLoginBackgroundMap() {
+      const el = document.getElementById("loginBgMap");
+      if (!el || loginBgMap) return;
+      
+      loginBgMap = L.map("loginBgMap", {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false
+      }).setView([40.5, -95.5], 5);
+
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18
+      }).addTo(loginBgMap);
+
+      setTimeout(() => { if (loginBgMap) loginBgMap.invalidateSize(); }, 150);
+    }
+
     // Immediate check on script parse
     (function() {
       if (window.lucide) lucide.createIcons();
+      initLoginBackgroundMap();
       const saved = localStorage.getItem("cryoguard_user");
       if (saved) {
         try {
